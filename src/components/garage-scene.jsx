@@ -39,7 +39,7 @@ function Floor({floor,focused,state,choosing,send,onInspect}){
 
  {charging&&<polygon className="charging-edge" points={pathPoints(corners.slice(0,2).concat(corners.slice(0,2).reverse().map(v=>[v[0],v[1],v[2]+1])))} fill="#8bb8be"/>}
  {status==='occupied'&&!activeHere&&<Vehicle {...loc} y={y+.8} angle={angle}/>}
- {selected&&status==='available'&&<g className="assignment-bay-pointer" transform={`translate(${project(loc.x,y,loc.z)[0]},${project(loc.x,y,loc.z)[1]-7})`} pointerEvents="none" aria-hidden="true"><ellipse cx="0" cy="-16" rx="6" ry="2.5" fill="#f0b450"/><path d="M-6-16L0-2L6-16Z" fill="#e8a43b"/></g>}
+ {selected&&status==='available'&&<g className="assignment-bay-pointer" transform={`translate(${project(loc.x,y,loc.z)[0]},${project(loc.x,y,loc.z)[1]-7})`} pointerEvents="none" aria-hidden="true"><g className="assignment-pointer-bob"><ellipse cx="0" cy="-12" rx="4" ry="1.7" fill="#f0b450"/><path d="M-4-12L0-3L4-12Z" fill="#e8a43b"/></g></g>}
  {(focused||selected)&&<text className="bay-number" x={project(loc.x,y,loc.z)[0]} y={project(loc.x,y,loc.z)[1]+22} textAnchor="middle" fill={status==='available'?'#c2dad1':'#a1adbe'} fontSize="12" fontFamily="ui-monospace, monospace">{String(bay).padStart(2,'0')}</text>}
  {enabled&&hoveredBay===bay&&<g className="bay-hover-label" transform={`translate(${project(loc.x,y,loc.z)[0]},${project(loc.x,y+12,loc.z)[1]-18})`} aria-hidden="true"><path d="M-55,-12 H55 V9 H4 L0,13 L-4,9 H-55 Z"/><text textAnchor="middle" y="2">{status==='available'?'Available':'Occupied'} · F{floor}-{String(bay).padStart(2,'0')}</text></g>}
  </g>;

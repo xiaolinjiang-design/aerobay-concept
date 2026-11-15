@@ -124,3 +124,5 @@ html[data-input=keyboard] #halo-linear-app .spot-assignment,html[data-input=keyb
 #halo-linear-app .garage-3d-root{inset:0;width:100%;background:transparent}#halo-linear-app .dispatch-main.right-queue-main{background:transparent}#halo-linear-app .garage-3d-root .floor-control{right:340px}@media(max-width:1100px){#halo-linear-app .garage-3d-root{left:0;right:0}#halo-linear-app .garage-3d-root .floor-control{right:300px}}@media(max-width:760px){#halo-linear-app .garage-3d-root .floor-control{right:18px}}
 
 #halo-linear-app .collapse-requests{width:27px;min-height:27px;padding:5px;color:var(--muted)}#halo-linear-app .queue-pane.requests-collapsed{bottom:auto;min-height:0;height:auto}#halo-linear-app .queue-pane.requests-collapsed .pane-title{margin-bottom:0}#halo-linear-app #request-list-content[hidden]{display:none}
+
+.assignment-pointer-bob{animation:assignment-pointer-bob 1800ms ease-in-out infinite}@keyframes assignment-pointer-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}@media(prefers-reduced-motion:reduce){.assignment-pointer-bob{animation:none}}
