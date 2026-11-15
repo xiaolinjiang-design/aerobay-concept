@@ -9,6 +9,7 @@ export default function Garage3D({ state, progress = 0, onSpotClick, className =
   const scene = useRef(null);
   const viewState = useMemo(() => ({
     occupiedBays:GARAGE_SPOTS.filter(({floor,bay})=>spaceStatus(state,floor,bay)==='occupied'),
+    reservedBays:GARAGE_SPOTS.filter(({floor,bay})=>spaceStatus(state,floor,bay)==='reserved'),
     availableBays:GARAGE_SPOTS.filter(({floor,bay})=>spaceStatus(state,floor,bay)==='available'),
     choosing: state.choosing,
     choice: state.choice,

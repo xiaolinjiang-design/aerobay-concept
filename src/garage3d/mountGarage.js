@@ -10,13 +10,22 @@ export function mountGarage(root,{mode='demo',initialState=null,onSpotClick}={})
 root.innerHTML=`<main class="concept"><div id="viewport" aria-label="Interactive 3D parking garage"></div><div class="floor-control" aria-label="View level"><button class="active" data-level="all">ALL</button>${[6,5,4,3,2,1].map(n=>`<button data-level="${n}">${String(n).padStart(2,'0')}</button>`).join('')}</div><div class="controls"><div class="gate-control"><div class="gate-heading">SHAFT <span class="shaft-status">EMPTY</span></div><div class="gate-row"><button data-action="admit">AUTHORIZE ENTRY ↓</button><button data-action="release">AUTHORIZE EXIT ↓</button></div><p class="gate-message" role="status">Gates closed · shaft clear</p></div></div></main>`;
 if(mode==='app')root.querySelector('.gate-control').hidden=true;
 const viewport=root.querySelector('#viewport');
-const scene=new THREE.Scene();scene.background=new THREE.Color('#090d13');scene.fog=new THREE.Fog('#090d13',45,100);
+const scene=new THREE.Scene();scene.fog=new THREE.Fog('#090d13',45,100);
+const backdrop=document.createElement('canvas');backdrop.width=512;backdrop.height=512;
+const backdropContext=backdrop.getContext('2d'),backdropGlow=backdropContext.createRadialGradient(256,218,12,256,218,330);
+backdropGlow.addColorStop(0,'#222b45');backdropGlow.addColorStop(.48,'#141c2e');backdropGlow.addColorStop(1,'#090d13');
+backdropContext.fillStyle=backdropGlow;backdropContext.fillRect(0,0,512,512);
+const backdropTexture=new THREE.CanvasTexture(backdrop);backdropTexture.colorSpace=THREE.SRGBColorSpace;scene.background=backdropTexture;
 const camera=new THREE.PerspectiveCamera(36,1,.1,200);camera.position.set(25,22,29);
-const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;viewport.append(renderer.domElement);
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.6;viewport.append(renderer.domElement);
 const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,5,0);controls.enableDamping=true;controls.dampingFactor=.055;controls.minDistance=mode==='app'?5:19;controls.maxDistance=95;controls.maxPolarAngle=Math.PI*.49;
-scene.add(new THREE.HemisphereLight('#c4d1e4','#111927',1.5));const sun=new THREE.DirectionalLight('#d6e1f2',2.0);sun.position.set(-12,28,14);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-30;sun.shadow.camera.right=30;sun.shadow.camera.top=30;sun.shadow.camera.bottom=-30;sun.shadow.bias=-.0002;scene.add(sun);
+scene.add(new THREE.HemisphereLight('#c4d1e4','#111927',2.1));const sun=new THREE.DirectionalLight('#d6e1f2',2.8);sun.position.set(-12,28,14);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-30;sun.shadow.camera.right=30;sun.shadow.camera.top=30;sun.shadow.camera.bottom=-30;sun.shadow.bias=-.0002;scene.add(sun);
+const rim=new THREE.DirectionalLight('#b9c5ff',3.2);rim.position.set(8,18,-16);scene.add(rim);
+const fill=new THREE.DirectionalLight('#95bad8',.65);fill.position.set(-16,8,-6);scene.add(fill);
 const mat=(color,roughness=.82,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
 const white=mat('#353e4b'),edge=mat('#28323f'),inside=mat('#202a36'),stripe=mat('#ffffff'),steel=mat('#59687a',.45,.35),dark=mat('#1b2531',.4,.2),teal=mat('#5e9295',.5,.2),amber=mat('#bc9b5c');
+const occupiedPaints=['#8ca8c0','#7996b1','#6f8da9','#9ab0c5'];
+const reservedPreviewMaterial=new THREE.MeshStandardMaterial({color:'#9288ed',emissive:'#6b5cc5',emissiveIntensity:.25,transparent:true,opacity:.3,roughness:.65,metalness:.1,depthWrite:false});
 const garage=new THREE.Group();scene.add(garage);const levels=[],bayTargets=[],bayMarkers=[];
 function mesh(geometry,material,parent=garage){const o=new THREE.Mesh(geometry,material);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
 function box(w,h,d,x,y,z,material,parent=garage){const o=mesh(new THREE.BoxGeometry(w,h,d),material,parent);o.position.set(x,y,z);return o}
@@ -51,7 +60,7 @@ const carStyles=[
  {front:1.64,rear:-1.64,width:.81,wheel:1.13,roofY:1.20,roofFront:.24,roofRear:-.67,glassFront:.77,glassRear:-1.17},
  {front:1.42,rear:-1.39,width:.76,wheel:.94,roofY:1.13,roofFront:.13,roofRear:-.50,glassFront:.66,glassRear:-.95}
 ];
-const carPaint=[white,mat('#4c5b6e',.65,.08),mat('#36495d',.55,.12),mat('#273649',.47,.2)];
+const carPaint=occupiedPaints.map(color=>mat(color,.55,.18));
 const parkedCars=[];
 const carGlass=new THREE.MeshStandardMaterial({color:'#263b48',roughness:.18,metalness:.14,side:THREE.DoubleSide});
 function car(parent,x,y,z,angle,color=white,styleIndex=0){
@@ -107,7 +116,7 @@ const hatchMaterial=mat('#354654',.32,.08);
 function gatePanels(parent,y){const panels=[];for(const side of [-1,1]){const shape=new THREE.Shape();if(side===1){shape.moveTo(0,-3.28);shape.absarc(0,0,3.28,-Math.PI/2,Math.PI/2,false);shape.lineTo(0,-3.28)}else{shape.moveTo(0,3.28);shape.absarc(0,0,3.28,Math.PI/2,Math.PI*1.5,false);shape.lineTo(0,3.28)}const panel=mesh(new THREE.ShapeGeometry(shape,48),hatchMaterial,parent);panel.rotation.x=-Math.PI/2;panel.position.y=y;panels.push(panel)}return panels}
 const topPanels=gatePanels(roof,15.08);
 const base=mesh(new THREE.ExtrudeGeometry(ringShape(16.5,3.35),{depth:.22,bevelEnabled:false,curveSegments:96}),mat('#202b38'));base.rotation.x=-Math.PI/2;base.position.y=-.4;base.receiveShadow=true;const bottomPanels=gatePanels(garage,-.15);
-const ground=mesh(new THREE.PlaneGeometry(200,200),mat('#090d13'));ground.rotation.x=-Math.PI/2;ground.position.y=-.43;ground.receiveShadow=true;
+const ground=mesh(new THREE.PlaneGeometry(200,200),new THREE.ShadowMaterial({color:'#020306',opacity:.3}));ground.rotation.x=-Math.PI/2;ground.position.y=-.43;ground.receiveShadow=true;
 const tunnel=new THREE.Group();garage.add(tunnel);
 const tunnelWall=mesh(new THREE.CylinderGeometry(3.3,3.3,15.1,64,1,true),new THREE.MeshPhysicalMaterial({color:'#5b8097',transparent:true,opacity:.24,roughness:.18,metalness:.1,side:THREE.DoubleSide,depthWrite:false}),tunnel);tunnelWall.position.y=7.45;tunnelWall.castShadow=false;
 for(let i=0;i<7;i++)torus(3.3,.055,i*2.35+.1,steel,tunnel);
@@ -133,18 +142,20 @@ new GLTFLoader().load(`${import.meta.env.BASE_URL}supercar.glb`,({scene:model})=
   if(!byMaterial.has(material))byMaterial.set(material,[]);byMaterial.get(material).push(geometry);
  });
  const parts=[...byMaterial].map(([material,geometries])=>({material,geometry:mergeGeometries(geometries,false)})).filter(part=>part.geometry);
- const paints=['#637184','#465b72','#34485e','#202c3b'];
+ const paints=occupiedPaints;
  for(let level=0;level<FLOOR_COUNT;level++){
   const cars=parkedCars.filter(item=>item.level===level);
   for(const {material,geometry} of parts){const paint=material.name==='paint';const displayMaterial=material.clone();if(paint){displayMaterial.map=null;displayMaterial.color.set('#ffffff');displayMaterial.metalness=.42;displayMaterial.roughness=.32}
    const instances=new THREE.InstancedMesh(geometry,displayMaterial,cars.length);instances.castShadow=true;instances.receiveShadow=true;
    const matrices=[];cars.forEach((item,index)=>{const length=[1,.94,1.06][index%3];item.group.scale.set(index%3===2?1.03:1,1,length);item.group.updateMatrix();matrices.push(item.group.matrix.clone());instances.setMatrixAt(index,item.group.matrix);if(paint)instances.setColorAt(index,new THREE.Color(paints[index%paints.length]))});
-   if(!instanceRows[level])instanceRows[level]=[];instanceRows[level].push({instances,cars,matrices});
+   if(!instanceRows[level])instanceRows[level]=[];instanceRows[level].push({instances,cars,matrices,kind:'occupied'});
    levels[level].add(instances);
+   const previews=new THREE.InstancedMesh(geometry,reservedPreviewMaterial,cars.length);previews.castShadow=false;previews.receiveShadow=false;
+   instanceRows[level].push({instances:previews,cars,matrices,kind:'reserved'});levels[level].add(previews);
   }
   cars.forEach(({group})=>{levels[level].remove(group);group.traverse(object=>{if(object.isMesh)object.geometry.dispose()})});
  }
- flying.clear();for(const {material,geometry} of parts){const displayMaterial=material.clone();if(material.name==='paint'){displayMaterial.map=null;displayMaterial.color.set('#8294b1')}const piece=new THREE.Mesh(geometry,displayMaterial);piece.castShadow=true;piece.receiveShadow=true;flying.add(piece)}
+ flying.clear();for(const {material,geometry} of parts){const displayMaterial=material.clone();if(material.name==='paint'){displayMaterial.map=null;displayMaterial.color.set('#9288ed')}const piece=new THREE.Mesh(geometry,displayMaterial);piece.userData.vehiclePaint=material.name==='paint';piece.castShadow=true;piece.receiveShadow=true;flying.add(piece)}
  if(currentState)update(currentState);
 },undefined,error=>console.error('Car model failed to load',error));
 let initialSize=true;function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;if(!w||!h)return;camera.aspect=w/h;if(initialSize){const scale=Math.max(1,1.05/camera.aspect)*(mode==='app'?1.28:1);camera.position.set(25*scale,5+17*scale,29*scale);initialSize=false}camera.updateProjectionMatrix();renderer.setSize(w,h)}const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(viewport);resize();
@@ -197,9 +208,18 @@ function onPointerUp(event){if(mode!=='app'||!pointerStart)return;const movement
 renderer.domElement.addEventListener('pointerdown',onPointerDown);renderer.domElement.addEventListener('pointerup',onPointerUp);
 function update(next){currentState=next;if(mode!=='app'||!next)return;
  const occupied=new Set((next.occupiedBays||[]).map(({floor,bay})=>`${floor}-${bay}`));
- if(next.active)occupied.delete(`${next.active.floor}-${next.active.bay}`);
- parkedCars.forEach(item=>{item.group.visible=occupied.has(`${item.level+1}-${item.bay}`)});
- instanceRows.forEach(rows=>rows.forEach(({instances,cars,matrices})=>{cars.forEach((item,index)=>instances.setMatrixAt(index,occupied.has(`${item.level+1}-${item.bay}`)?matrices[index]:hiddenMatrix));instances.instanceMatrix.needsUpdate=true}));
+ const reserved=new Set((next.reservedBays||[]).map(({floor,bay})=>`${floor}-${bay}`));
+ if(next.active){const spot=`${next.active.floor}-${next.active.bay}`;occupied.delete(spot);reserved.delete(spot);}
+ parkedCars.forEach(item=>{
+  const spot=`${item.level+1}-${item.bay}`,preview=reserved.has(spot);item.group.visible=occupied.has(spot)||preview;
+  item.group.traverse(part=>{if(!part.isMesh)return;if(!part.userData.vehicleMaterial)part.userData.vehicleMaterial=part.material;part.material=preview?reservedPreviewMaterial:part.userData.vehicleMaterial;});
+ });
+ instanceRows.forEach(rows=>rows.forEach(({instances,cars,matrices,kind})=>{
+  const visible=kind==='reserved'?reserved:occupied;
+  instances.visible=cars.some(item=>visible.has(`${item.level+1}-${item.bay}`));
+  cars.forEach((item,index)=>instances.setMatrixAt(index,visible.has(`${item.level+1}-${item.bay}`)?matrices[index]:hiddenMatrix));instances.instanceMatrix.needsUpdate=true;
+ }));
+ flying.traverse(part=>{if(part.userData.vehiclePaint)part.material.color.set(next.active?.type==='arrival'?'#9288ed':'#8ca8c0')});
  const active=next.active;gateState.top=!!active&&active.type==='arrival'&&active.phase==='gate-open';gateState.bottom=!!active&&active.type==='departure'&&active.phase==='gate-open';gateState.phase=active?'inside':'empty';
  flying.visible=selected==='all'&&!!active;flightGlow.visible=flying.visible;
  const phaseKey=active?`${active.id}-${active.phase}`:null;
@@ -238,5 +258,5 @@ const clock=new THREE.Clock();let frame;function animate(){if(disposed)return;fr
  else if(mode==='demo'&&gateState.phase==='exitClosing'&&elapsed>=800)setPhase('empty');
  else if(mode==='demo'&&gateState.phase==='inside')flying.position.y=7+.16*Math.sin(t*.9);
  if(mode==='demo')flying.rotation.y=t*.17;if(mode==='demo')[[topPanels,gateState.top],[bottomPanels,gateState.bottom]].forEach(([panels,open])=>panels.forEach((panel,i)=>{const target=open?(i===0?-3.5:3.5):0;panel.position.x+=(target-panel.position.x)*.1}));if(cameraGoal){camera.position.lerp(cameraGoal,.11);controls.target.lerp(targetGoal,.11);if(camera.position.distanceTo(cameraGoal)<.03){camera.position.copy(cameraGoal);controls.target.copy(targetGoal);cameraGoal=null;targetGoal=null}}controls.update();renderer.render(scene,camera)}animate();
-return{update,dispose(){disposed=true;cancelAnimationFrame(frame);resizeObserver.disconnect();renderer.domElement.removeEventListener('pointerdown',onPointerDown);renderer.domElement.removeEventListener('pointerup',onPointerUp);controls.dispose();scene.traverse(object=>{if(object.isMesh){object.geometry.dispose();if(Array.isArray(object.material))object.material.forEach(m=>m.dispose());else object.material.dispose()}});renderer.dispose();root.replaceChildren()}};
+return{update,dispose(){disposed=true;cancelAnimationFrame(frame);resizeObserver.disconnect();renderer.domElement.removeEventListener('pointerdown',onPointerDown);renderer.domElement.removeEventListener('pointerup',onPointerUp);controls.dispose();scene.traverse(object=>{if(object.isMesh){object.geometry.dispose();if(Array.isArray(object.material))object.material.forEach(m=>m.dispose());else object.material.dispose()}});backdropTexture.dispose();renderer.dispose();root.replaceChildren()}};
 }
