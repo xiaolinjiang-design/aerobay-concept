@@ -47,6 +47,8 @@ function Floor({floor,focused,state,choosing,send,onInspect}){
 }
 export default function GarageScene({state,send,progress}){
  const[focus,updateFocus]=useState(null),[inspected,setInspected]=useState(null),[assignCar,setAssignCar]=useState('');const anchorRef=useRef(null),lastTrigger=useRef(null),sceneRef=useRef(null);
+ const stageRef=useRef(null),[stageSize,setStageSize]=useState({width:700,height:600});
+ useLayoutEffect(()=>{const stage=stageRef.current;if(!stage)return;const observer=new ResizeObserver(([entry])=>setStageSize({width:entry.contentRect.width,height:entry.contentRect.height}));observer.observe(stage);return()=>observer.disconnect();},[]);
  const zoomRef=useRef(null),zoomAnimation=useRef(null);
  function setFocus(next){
   if(next===focus)return;
@@ -83,8 +85,15 @@ useEffect(()=>{if(state.choosing){setFocus(null);setInspected(null);}},[state.ch
  const car=occupied?parkedVehicle(state,inspected.floor,inspected.bay):null;
  const timing=car?parkingTime(car):null;
  const active=state.active;let vehicle=null,flightPath=null;if(active&&active.id!=='C-204'&&active.phase!=='confirming'){let loc=location(active.floor,active.bay),t=active.phase==='transit'?progress/100:active.type==='departure'&&['reserved','gate-open','gate-closing','confirming'].includes(active.phase)?1:0;if(active.type==='departure')t=1-t;let portal=active.type==='arrival'?165:-18;let lateral=Math.max(0,(t-.72)/.28),y=portal+(loc.y-portal)*Math.min(t/.72,1);vehicle=<Vehicle x={loc.x*lateral} y={y+2} z={loc.z*lateral} angle={ANGLES[active.bay-1]+90} active/>;flightPath=<polyline points={pathPoints([[0,portal,0],[0,loc.y,0],[loc.x,loc.y,loc.z]])} fill="none" stroke="#9b9de0" strokeWidth="2" strokeDasharray="4 5"/>;}
- const viewBox=focus?`70 ${215-(focus-1)*43.4} 460 260`:'50 55 500 515';
- return <section ref={sceneRef} className="iso-garage"><div className="scene-toolbar"><div className="floor-dropdown"><Select value={String(focus||'all')} onValueChange={value=>{setFocus(value==='all'?null:Number(value));setInspected(null);}}><SelectTrigger aria-label="Select floor"><Layers size={13}/><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All floors</SelectItem>{[6,5,4,3,2,1].map(f=><SelectItem key={f} value={String(f)}>Floor {f}</SelectItem>)}</SelectContent></Select></div></div><div className={`isometric-stage ${focus?'floor-focus':''}`}>
+ let viewBox=focus?`70 ${215-(focus-1)*43.4} 460 260`:'50 55 500 515';
+ if(focus&&inspected){
+  const loc=location(inspected.floor,inspected.bay),[x,y]=project(loc.x,loc.y,loc.z),width=460,height=width*stageSize.height/Math.max(stageSize.width,1);
+  // Frame the popover and bay as one composition, leaving room below for suggestions.
+  const reserved=state.choosing?145:20,usable=Math.max(260,stageSize.height-reserved),bayY=Math.min(usable-45,usable/2+145);
+  viewBox=`${x-width/2} ${y-bayY/Math.max(stageSize.height,1)*height} ${width} ${height}`;
+ }
+
+ return <section ref={sceneRef} className="iso-garage"><div className="scene-toolbar"><div className="floor-dropdown"><Select value={String(focus||'all')} onValueChange={value=>{setFocus(value==='all'?null:Number(value));setInspected(null);}}><SelectTrigger aria-label="Select floor"><Layers size={13}/><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All floors</SelectItem>{[6,5,4,3,2,1].map(f=><SelectItem key={f} value={String(f)}>Floor {f}</SelectItem>)}</SelectContent></Select></div></div><div ref={stageRef} className={`isometric-stage ${focus?'floor-focus':''}`}>
  <svg className="garage-svg" style={{transformOrigin:'0 0'}} viewBox={viewBox} role="group" aria-label="Isometric donut-shaped garage with six floors, parked vehicles, and a shared central shaft"><defs><radialGradient id="garage-ambient"><stop offset="0" stopColor="#526477" stopOpacity=".14"/><stop offset="1" stopColor="#0a0d12" stopOpacity="0"/></radialGradient></defs><ellipse cx="300" cy="430" rx="250" ry="115" fill="url(#garage-ambient)"/>
  {!focus&&<g opacity=".15" stroke="#73808c" strokeWidth=".6">{[-120,-80,-40,0,40,80,120].map(v=><g key={v}><line x1={project(v,-5,-120)[0]} y1={project(v,-5,-120)[1]} x2={project(v,-5,120)[0]} y2={project(v,-5,120)[1]}/><line x1={project(-120,-5,v)[0]} y1={project(-120,-5,v)[1]} x2={project(120,-5,v)[0]} y2={project(120,-5,v)[1]}/></g>)}</g>}
  {!focus&&[1,2,3,4,5,6].map(f=><g key={f}><Floor floor={f} state={{...state,choice:inspected||state.choice}} focused={false} choosing={false} send={send} onInspect={inspect}/></g>)}
