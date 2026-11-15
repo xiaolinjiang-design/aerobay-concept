@@ -93,6 +93,8 @@ if(mode==='app')for(let floor=1;floor<=6;floor++)for(let bay=1;bay<=6;bay++){
  const marker=mesh(new THREE.RingGeometry(1.44,1.53,48),new THREE.MeshBasicMaterial({color:'#72d4a4',side:THREE.DoubleSide,transparent:true,opacity:.85,depthWrite:false}),levels[floor-1]);marker.rotation.x=-Math.PI/2;marker.position.set(x,y+.015,z);marker.castShadow=false;marker.visible=false;marker.userData={floor,bay};bayMarkers.push(marker);
  const target=mesh(new THREE.CircleGeometry(1.65,48),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}),levels[floor-1]);target.rotation.x=-Math.PI/2;target.position.set(x,y+.02,z);target.castShadow=false;target.userData={floor,bay};bayTargets.push(target);
 }
+const assignmentPointer=mesh(new THREE.ConeGeometry(.34,.85,24),new THREE.MeshBasicMaterial({color:'#e8a43b',depthTest:false,depthWrite:false}),garage);
+assignmentPointer.rotation.z=Math.PI;assignmentPointer.renderOrder=20;assignmentPointer.castShadow=false;assignmentPointer.visible=false;
 // An opaque charcoal roof shades the decks; the central hatch seals the flight shaft.
 const roof=new THREE.Group();garage.add(roof);
 const roofMaterial=mat('#293440',.88);roofMaterial.side=THREE.DoubleSide;
@@ -177,6 +179,9 @@ function update(next){currentState=next;if(mode!=='app'||!next)return;
  if(active){const amount=Math.min(1,Math.max(0,(next.progress||0)/100));flying.position.y=active.type==='arrival'?17-10*amount:7-11*amount}
  const available=new Set((next.availableBays||[]).map(spot=>`${spot.floor}-${spot.bay}`));
  bayMarkers.forEach(marker=>{const spot=marker.userData,isChoice=next.choice?.floor===spot.floor&&next.choice?.bay===spot.bay;marker.visible=next.choosing&&available.has(`${spot.floor}-${spot.bay}`);marker.material.color.set(isChoice?'#ffe1a2':'#72d4a4');marker.scale.setScalar(isChoice?1.16:1)});
+ const pointerSpot=next.choice;
+ assignmentPointer.visible=!!(next.choosing&&pointerSpot&&available.has(`${pointerSpot.floor}-${pointerSpot.bay}`));
+ if(assignmentPointer.visible){const angle=(pointerSpot.bay-1)*Math.PI/3+Math.PI/12;assignmentPointer.position.set(10.1*Math.cos(angle),(pointerSpot.floor-1)*2.35+1.35,10.1*Math.sin(angle));}
  const spot=next.choice||(next.choosing&&!wasChoosing?next.suggestedBays?.[0]:null);const focusKey=spot?`${spot.floor}-${spot.bay}`:null;
  if(spot&&focusKey!==lastFocusKey){focusSpot(spot);lastFocusKey=focusKey}
  if(!next.choosing)lastFocusKey=null;wasChoosing=next.choosing;
