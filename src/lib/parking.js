@@ -1,4 +1,4 @@
-export const initial=()=>({requests:[{id:'C-118',type:'arrival',status:'new',floor:null,bay:null,departure:'17:30'},{id:'C-076',type:'departure',status:'new',floor:2,bay:1,departure:'Now'}],queue:[],active:{id:'C-204',type:'departure',floor:3,bay:2,phase:'transit'},shaft:'occupied',selected:'C-118',choosing:false,choice:null,event:'C-118 requested parking.',overrides:{}});
+export const initial=()=>({requests:[{id:'C-118',type:'arrival',status:'new',floor:null,bay:null,arrival:'14:32',departure:'17:30'},{id:'C-076',type:'departure',status:'new',floor:2,bay:1,arrival:'10:15',departure:'14:35'}],queue:[],active:{id:'C-204',type:'departure',floor:3,bay:2,phase:'transit'},shaft:'occupied',selected:'C-118',choosing:false,choice:null,event:'C-118 requested parking.',overrides:{}});
 export const key=r=>r.floor+'-'+r.bay;
 export const place=r=>'F'+r.floor+' · '+String(r.bay).padStart(2,'0');
 const baseEmpty=(f,n)=>(f+n)%3===1;

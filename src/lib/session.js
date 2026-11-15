@@ -12,7 +12,8 @@ export function loadSession() {
     if (!state.queue.every(id => ids.has(id)) || new Set(state.queue).size !== state.queue.length) return initial();
     if (!['occupied', 'reserved', 'checking', 'clear'].includes(state.shaft)) return initial();
     if (!state.overrides || typeof state.overrides !== 'object') return initial();
-    return state;
+    const defaults = initial().requests;
+    return {...state, requests:state.requests.map(r=>({...r,arrival:r.arrival||defaults.find(d=>d.id===r.id).arrival,departure:r.departure==='Now'?'14:35':r.departure}))};
   } catch {
     return initial();
   }
