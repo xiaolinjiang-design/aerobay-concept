@@ -202,3 +202,11 @@ html[data-input=keyboard] #halo-linear-app .spot-assignment,html[data-input=keyb
 #halo-linear-app .movement-steps li:last-child{flex:0 0 var(--timeline-node-size)}
 #halo-linear-app .movement-steps li:last-child .step-label,#halo-linear-app .movement-steps li:last-child .step-state{position:relative;left:100%;transform:translateX(-100%);width:max-content;max-width:80px;padding-right:0;text-align:right}
 @media(max-width:560px){#halo-linear-app .movement-steps{--timeline-node-size:24px}}
+
+#halo-linear-app .queue-pane{padding-top:0}
+#halo-linear-app .request-pane-header{position:sticky;top:0;z-index:2;background:var(--panel);margin-inline:-12px;padding:17px 12px 18px}
+#halo-linear-app .request-pane-header>.pane-title{margin-bottom:22px}
+#halo-linear-app .request-pane-header .request-filters{margin-bottom:0}
+#halo-linear-app .request-pane-header .request-filters[hidden]{display:none}
+#halo-linear-app .requests-collapsed .request-pane-header{padding-bottom:0}
+#halo-linear-app .requests-collapsed .request-pane-header>.pane-title{margin-bottom:0}
