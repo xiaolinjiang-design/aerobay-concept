@@ -147,3 +147,14 @@ html[data-input=keyboard] #halo-linear-app .spot-assignment,html[data-input=keyb
  #halo-linear-app .expanded-spot-details dl>div:nth-child(4){grid-column:3;grid-row:2}
  #halo-linear-app .spot-assignment-actions{grid-column:2 / -1;grid-row:3;margin-top:3px}
 }
+
+#halo-linear-app .suggestion-list{overflow:hidden}
+#halo-linear-app .suggestion-item{min-width:0;transform-origin:left top}
+#halo-linear-app .suggestion-item>.recommendation-card{width:100%;height:100%;box-sizing:border-box}
+#halo-linear-app .expanded-recommendation{padding-right:16px}
+@media(min-width:561px){
+ #halo-linear-app .suggestion-list,#halo-linear-app .suggestion-list.has-expanded-spot{display:flex;flex-wrap:nowrap;align-items:stretch;gap:9px}
+ #halo-linear-app .suggestion-item{flex:0 0 calc((100% - 18px)/3)}
+ #halo-linear-app .suggestion-item.is-expanded{flex-basis:100%}
+}
+@media(max-width:560px){#halo-linear-app .has-expanded-spot .suggestion-item:not(.is-expanded){display:none}}
