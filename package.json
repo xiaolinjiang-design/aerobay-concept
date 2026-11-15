@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test src/lib/parking.test.js src/garage3d/vehicle-motion.test.js"
+    "test": "node --test src/lib/parking.test.js src/garage3d/vehicle-motion.test.js src/garage3d/camera-framing.test.js"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

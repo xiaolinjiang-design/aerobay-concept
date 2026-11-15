@@ -1,3 +1,4 @@
+import {applyViewport,towerOverviewPose} from './camera-framing.js';
 import {FLOOR_COUNT,BAYS_PER_FLOOR,bayAngle} from '../lib/garage-layout.js';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -12,9 +13,13 @@ if(mode==='app')root.querySelector('.gate-control').hidden=true;
 const viewport=root.querySelector('#viewport');
 const scene=new THREE.Scene();scene.fog=new THREE.Fog('#090d13',45,100);
 const backdrop=document.createElement('canvas');backdrop.width=512;backdrop.height=512;
-const backdropContext=backdrop.getContext('2d'),backdropGlow=backdropContext.createRadialGradient(256,218,12,256,218,330);
-backdropGlow.addColorStop(0,'#222b45');backdropGlow.addColorStop(.48,'#141c2e');backdropGlow.addColorStop(1,'#090d13');
-backdropContext.fillStyle=backdropGlow;backdropContext.fillRect(0,0,512,512);
+const backdropContext=backdrop.getContext('2d');
+function drawBackdrop(x=.5,y=.5){
+ const glow=backdropContext.createRadialGradient(x*512,y*512,12,x*512,y*512,330);
+ glow.addColorStop(0,'#222b45');glow.addColorStop(.48,'#141c2e');glow.addColorStop(1,'#090d13');
+ backdropContext.fillStyle=glow;backdropContext.fillRect(0,0,512,512);
+}
+drawBackdrop();
 const backdropTexture=new THREE.CanvasTexture(backdrop);backdropTexture.colorSpace=THREE.SRGBColorSpace;scene.background=backdropTexture;
 const camera=new THREE.PerspectiveCamera(36,1,.1,200);camera.position.set(25,22,29);
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.6;viewport.append(renderer.domElement);
@@ -158,8 +163,36 @@ new GLTFLoader().load(`${import.meta.env.BASE_URL}supercar.glb`,({scene:model})=
  flying.clear();for(const {material,geometry} of parts){const displayMaterial=material.clone();if(material.name==='paint'){displayMaterial.map=null;displayMaterial.color.set('#9288ed')}const piece=new THREE.Mesh(geometry,displayMaterial);piece.userData.vehiclePaint=material.name==='paint';piece.castShadow=true;piece.receiveShadow=true;flying.add(piece)}
  if(currentState)update(currentState);
 },undefined,error=>console.error('Car model failed to load',error));
-let initialSize=true;function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;if(!w||!h)return;camera.aspect=w/h;if(initialSize){const scale=Math.max(1,1.05/camera.aspect)*(mode==='app'?1.28:1);camera.position.set(25*scale,5+17*scale,29*scale);initialSize=false}camera.updateProjectionMatrix();renderer.setSize(w,h)}const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(viewport);resize();
-let selected='all';root.querySelectorAll('[data-level]').forEach(button=>button.addEventListener('click',()=>{selected=button.dataset.level;root.querySelectorAll('[data-level]').forEach(b=>b.classList.toggle('active',b===button));levels.forEach((g,i)=>{g.visible=selected==='all'||i+1===Number(selected)});flightGlow.visible=selected==='all';flying.visible=selected==='all'&&gateState.phase!=='empty'}));
+let initialSize=true,resizeFrame,lastViewportKey='';
+function resize(){
+ const w=viewport.clientWidth,h=viewport.clientHeight;if(!w||!h)return;
+ const app=root.closest('#halo-linear-app'),bounds=viewport.getBoundingClientRect();
+ let left=16,top=16,right=w-16,bottom=h-16;
+ if(mode==='app'&&app&&w>=1000){
+  const requestBounds=app.querySelector('.queue-pane').getBoundingClientRect(),queueBounds=app.querySelector('.right-queue').getBoundingClientRect();
+  left=requestBounds.right-bounds.left+20;right=queueBounds.left-bounds.left-20;
+  const cards=[...app.querySelectorAll('.movement-timeline,.occupancy-overview,.shaft-camera')];
+  top=Math.max(...cards.map(card=>card.getBoundingClientRect().bottom-bounds.top))+20;
+  const suggestions=app.querySelector('.spot-assignment');
+  if(suggestions)bottom=Math.min(bottom,suggestions.getBoundingClientRect().top-bounds.top-16);
+ }
+ left=Math.max(16,Math.min(w-276,left));right=Math.min(w-16,Math.max(left+260,right));
+ top=Math.max(16,Math.min(h-196,top));bottom=Math.min(h-16,Math.max(top+180,bottom));
+ const area={left,top,width:right-left,height:bottom-top},viewportKey=[w,h,left,top,right,bottom].join(':');
+ applyViewport(camera,area,w,h);renderer.setSize(w,h);
+ if(viewportKey!==lastViewportKey){drawBackdrop((left+area.width/2)/w,(top+area.height/2)/h);backdropTexture.needsUpdate=true;}
+ root.dataset.sceneViewport=JSON.stringify(area);
+ if(initialSize){const pose=towerOverviewPose(camera);camera.position.copy(pose.position);controls.target.copy(pose.target);controls.maxDistance=Math.max(95,pose.position.distanceTo(pose.target)*1.3);initialSize=false;}
+ else if(viewportKey!==lastViewportKey&&selected==='all')overview();
+ lastViewportKey=viewportKey;
+}
+function scheduleResize(){cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(resize)}
+const resizeObserver=new ResizeObserver(scheduleResize);resizeObserver.observe(viewport);
+const appLayout=root.closest('#halo-linear-app');
+const layoutObserver=new MutationObserver(()=>{const suggestions=appLayout?.querySelector('.spot-assignment');if(suggestions)resizeObserver.observe(suggestions);scheduleResize()});
+if(appLayout){layoutObserver.observe(appLayout,{childList:true,subtree:true});appLayout.querySelectorAll('.movement-timeline,.occupancy-overview,.shaft-camera,.queue-pane,.right-queue').forEach(card=>resizeObserver.observe(card));}
+resize();
+let selected='all';root.querySelectorAll('[data-level]').forEach(button=>button.addEventListener('click',()=>{selected=button.dataset.level;root.querySelectorAll('[data-level]').forEach(b=>b.classList.toggle('active',b===button));levels.forEach((g,i)=>{g.visible=selected==='all'||i+1===Number(selected)});flightGlow.visible=selected==='all';flying.visible=selected==='all'&&gateState.phase!=='empty';if(selected==='all')overview()}));
 const gateState={top:false,bottom:false,phase:'empty'};const admitButton=root.querySelector('[data-action="admit"]'),releaseButton=root.querySelector('[data-action="release"]');const status=root.querySelector('.shaft-status'),message=root.querySelector('.gate-message');let phaseStart=0;
 function setPhase(phase,note){gateState.phase=phase;phaseStart=performance.now();gateState.top=['entryOpening','entering'].includes(phase);gateState.bottom=['exitOpening','exiting'].includes(phase);admitButton.disabled=phase!=='empty';releaseButton.disabled=phase!=='inside';status.textContent=phase==='empty'?'EMPTY':phase==='inside'?'1 CAR INSIDE':'MOVING';message.textContent=note||(phase==='empty'?'Gates closed · shaft clear':phase==='inside'?'Gates closed · car inside':'Gate locked during movement');flying.visible=selected==='all'&&phase!=='empty'}
 admitButton.addEventListener('click',()=>{if(admitButton.disabled)return;flying.position.y=17;setPhase('entryOpening','Top gate opening')});
@@ -170,7 +203,7 @@ let activePhaseKey=null,activePhaseStart=performance.now();
 const routeGroup=new THREE.Group();garage.add(routeGroup);
 function overview(){
  selected='all';root.querySelectorAll('[data-level]').forEach(button=>button.classList.toggle('active',button.dataset.level==='all'));levels.forEach(group=>group.visible=true);roof.visible=false;
- const scale=Math.max(1,1.05/camera.aspect)*1.28;cameraGoal=new THREE.Vector3(25*scale,5+17*scale,29*scale);targetGoal=new THREE.Vector3(0,6.5,0);
+ const pose=towerOverviewPose(camera);cameraGoal=pose.position;targetGoal=pose.target;controls.maxDistance=Math.max(95,pose.position.distanceTo(pose.target)*1.3);
  if(matchMedia('(prefers-reduced-motion: reduce)').matches){camera.position.copy(cameraGoal);controls.target.copy(targetGoal);cameraGoal=null;targetGoal=null;}
 }
 function showRoute(route){
@@ -185,6 +218,16 @@ function showRoute(route){
  for(const [radius,opacity] of [[.16,.035],[.085,.12],[.035,.98]]){
   const trail=mesh(new THREE.TubeGeometry(curve,100,radius,12,false),new THREE.MeshBasicMaterial({color:routeColor,transparent:true,opacity,blending:radius>.035?THREE.AdditiveBlending:THREE.NormalBlending,toneMapped:false,depthTest:true,depthWrite:false}),routeGroup);
   trail.castShadow=false;
+ }
+ const routeLength=curve.getLength();
+ for(let distance=2;distance<routeLength-1;distance+=2.6){
+  const progress=distance/routeLength,direction=curve.getTangent(progress).normalize();
+  const side=Math.abs(direction.y)>.9?new THREE.Vector3(1,0,-1).normalize():new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0),direction).normalize();
+  const back=direction.clone().multiplyScalar(-.42),tip=direction.clone().multiplyScalar(.42);
+  const left=back.clone().addScaledVector(side,.38),right=back.clone().addScaledVector(side,-.38),chevron=new THREE.CurvePath();
+  chevron.add(new THREE.LineCurve3(left,tip));chevron.add(new THREE.LineCurve3(tip,right));
+  const arrow=mesh(new THREE.TubeGeometry(chevron,12,.045,6,false),new THREE.MeshBasicMaterial({color:routeColor.clone().lerp(new THREE.Color('#ffffff'),.45),toneMapped:false,depthTest:true}),routeGroup);
+  arrow.name='Route direction arrow';arrow.position.copy(curve.getPoint(progress));arrow.castShadow=false;
  }
  const end=mesh(new THREE.SphereGeometry(.12,16,12),new THREE.MeshBasicMaterial({color:routeColor,toneMapped:false,depthTest:true}),routeGroup);end.position.copy(points.at(-1));end.castShadow=false;
  const endGlow=mesh(new THREE.SphereGeometry(.23,16,12),new THREE.MeshBasicMaterial({color:routeColor,transparent:true,opacity:.09,blending:THREE.AdditiveBlending,toneMapped:false,depthTest:true,depthWrite:false}),routeGroup);endGlow.position.copy(end.position);endGlow.castShadow=false;
@@ -258,5 +301,5 @@ const clock=new THREE.Clock();let frame;function animate(){if(disposed)return;fr
  else if(mode==='demo'&&gateState.phase==='exitClosing'&&elapsed>=800)setPhase('empty');
  else if(mode==='demo'&&gateState.phase==='inside')flying.position.y=7+.16*Math.sin(t*.9);
  if(mode==='demo')flying.rotation.y=t*.17;if(mode==='demo')[[topPanels,gateState.top],[bottomPanels,gateState.bottom]].forEach(([panels,open])=>panels.forEach((panel,i)=>{const target=open?(i===0?-3.5:3.5):0;panel.position.x+=(target-panel.position.x)*.1}));if(cameraGoal){camera.position.lerp(cameraGoal,.11);controls.target.lerp(targetGoal,.11);if(camera.position.distanceTo(cameraGoal)<.03){camera.position.copy(cameraGoal);controls.target.copy(targetGoal);cameraGoal=null;targetGoal=null}}controls.update();renderer.render(scene,camera)}animate();
-return{update,dispose(){disposed=true;cancelAnimationFrame(frame);resizeObserver.disconnect();renderer.domElement.removeEventListener('pointerdown',onPointerDown);renderer.domElement.removeEventListener('pointerup',onPointerUp);controls.dispose();scene.traverse(object=>{if(object.isMesh){object.geometry.dispose();if(Array.isArray(object.material))object.material.forEach(m=>m.dispose());else object.material.dispose()}});backdropTexture.dispose();renderer.dispose();root.replaceChildren()}};
+return{update,dispose(){disposed=true;cancelAnimationFrame(frame);cancelAnimationFrame(resizeFrame);resizeObserver.disconnect();layoutObserver.disconnect();renderer.domElement.removeEventListener('pointerdown',onPointerDown);renderer.domElement.removeEventListener('pointerup',onPointerUp);controls.dispose();scene.traverse(object=>{if(object.isMesh){object.geometry.dispose();if(Array.isArray(object.material))object.material.forEach(m=>m.dispose());else object.material.dispose()}});backdropTexture.dispose();renderer.dispose();root.replaceChildren()}};
 }
