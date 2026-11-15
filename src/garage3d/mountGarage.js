@@ -1,3 +1,4 @@
+import {FLOOR_COUNT,BAYS_PER_FLOOR,bayAngle} from '../lib/garage-layout.js';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -80,15 +81,15 @@ function car(parent,x,y,z,angle,color=white,styleIndex=0){
  }
  return g;
 }
-for(let level=0;level<6;level++){const group=new THREE.Group();garage.add(group);levels.push(group);const y=level*2.35;const slab=mesh(floorGeometry,white,group);slab.position.y=y;torus(12.68,.13,y+.38,edge,group);torus(4.18,.11,y+.39,steel,group);
- for(let i=0;i<12;i++){const a=i*Math.PI/6;for(const r of [6.55,11.75]){const x=r*Math.cos(a),z=r*Math.sin(a);line([x,z],[x+.01*Math.cos(a),z+.01*Math.sin(a)],y+.4,.035,edge,group)}const p1=[7.65*Math.cos(a),7.65*Math.sin(a)],p2=[12.25*Math.cos(a),12.25*Math.sin(a)];line(p1,p2,y+.405,.035,stripe,group);const mid=a+Math.PI/12;const tx=10.1*Math.cos(mid),tz=10.1*Math.sin(mid);const tick=mesh(new THREE.RingGeometry(.52,.57,40),teal,group);tick.rotation.x=-Math.PI/2;tick.position.set(tx,y+.41,tz);if(mode==='app'?i%2===0:(i+level)%6!==0){car(group,tx,y+.42,tz,-mid-Math.PI/2,carPaint[(i+level*3)%carPaint.length],(i+level*2)%carStyles.length);if(mode==='app')parkedCars.at(-1).bay=i/2+1}}
+for(let level=0;level<FLOOR_COUNT;level++){const group=new THREE.Group();garage.add(group);levels.push(group);const y=level*2.35;const slab=mesh(floorGeometry,white,group);slab.position.y=y;torus(12.68,.13,y+.38,edge,group);torus(4.18,.11,y+.39,steel,group);
+ for(let i=0;i<BAYS_PER_FLOOR;i++){const a=i*Math.PI*2/BAYS_PER_FLOOR;for(const r of [6.55,11.75]){const x=r*Math.cos(a),z=r*Math.sin(a);line([x,z],[x+.01*Math.cos(a),z+.01*Math.sin(a)],y+.4,.035,edge,group)}const p1=[7.65*Math.cos(a),7.65*Math.sin(a)],p2=[12.25*Math.cos(a),12.25*Math.sin(a)];line(p1,p2,y+.405,.035,stripe,group);const mid=bayAngle(i+1);const tx=10.1*Math.cos(mid),tz=10.1*Math.sin(mid);const tick=mesh(new THREE.RingGeometry(.52,.57,40),teal,group);tick.rotation.x=-Math.PI/2;tick.position.set(tx,y+.41,tz);if(mode==='app'||(i+level)%6!==0){car(group,tx,y+.42,tz,-mid-Math.PI/2,carPaint[(i+level*3)%carPaint.length],(i+level*2)%carStyles.length);if(mode==='app')parkedCars.at(-1).bay=i+1}}
  for(let i=0;i<24;i++){const a=i*Math.PI/12;const innerR=4.3,outerR=12.65;const xi=innerR*Math.cos(a),zi=innerR*Math.sin(a),xo=outerR*Math.cos(a),zo=outerR*Math.sin(a);if(i%2===0){box(.17,1.25,.17,xo,y+1.01,zo,white,group);box(.13,.65,.13,xi,y+.75,zi,white,group)}const b=a+Math.PI/12;line([xo,zo],[outerR*Math.cos(b),outerR*Math.sin(b)],y+1.52,.055,white,group);line([xi,zi],[innerR*Math.cos(b),innerR*Math.sin(b)],y+1.08,.045,white,group)}
  const wallBottom=y+.38,wallTop=level===5?15.05:y+2.35,wallHeight=wallTop-wallBottom;
  torus(12.78,.055,wallTop,steel,group);
  for(let i=0;i<24;i++){const a=i*Math.PI/12;box(.09,wallHeight,.09,12.78*Math.cos(a),(wallBottom+wallTop)/2,12.78*Math.sin(a),steel,group)}
  }
-if(mode==='app')for(let floor=1;floor<=6;floor++)for(let bay=1;bay<=6;bay++){
- const angle=(bay-1)*Math.PI/3+Math.PI/12,x=10.1*Math.cos(angle),z=10.1*Math.sin(angle),y=(floor-1)*2.35+.43;
+if(mode==='app')for(let floor=1;floor<=FLOOR_COUNT;floor++)for(let bay=1;bay<=BAYS_PER_FLOOR;bay++){
+ const angle=bayAngle(bay),x=10.1*Math.cos(angle),z=10.1*Math.sin(angle),y=(floor-1)*2.35+.43;
  const marker=mesh(new THREE.RingGeometry(1.44,1.53,48),new THREE.MeshBasicMaterial({color:'#72d4a4',side:THREE.DoubleSide,transparent:true,opacity:.85,depthWrite:false}),levels[floor-1]);marker.rotation.x=-Math.PI/2;marker.position.set(x,y+.015,z);marker.castShadow=false;marker.visible=false;marker.userData={floor,bay};bayMarkers.push(marker);
  const target=mesh(new THREE.CircleGeometry(1.65,48),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}),levels[floor-1]);target.rotation.x=-Math.PI/2;target.position.set(x,y+.02,z);target.castShadow=false;target.userData={floor,bay};bayTargets.push(target);
 }
@@ -133,7 +134,7 @@ new GLTFLoader().load(`${import.meta.env.BASE_URL}supercar.glb`,({scene:model})=
  });
  const parts=[...byMaterial].map(([material,geometries])=>({material,geometry:mergeGeometries(geometries,false)})).filter(part=>part.geometry);
  const paints=['#637184','#465b72','#34485e','#202c3b'];
- for(let level=0;level<6;level++){
+ for(let level=0;level<FLOOR_COUNT;level++){
   const cars=parkedCars.filter(item=>item.level===level);
   for(const {material,geometry} of parts){const paint=material.name==='paint';const displayMaterial=material.clone();if(paint){displayMaterial.map=null;displayMaterial.color.set('#ffffff');displayMaterial.metalness=.42;displayMaterial.roughness=.32}
    const instances=new THREE.InstancedMesh(geometry,displayMaterial,cars.length);instances.castShadow=true;instances.receiveShadow=true;
@@ -165,7 +166,7 @@ function showRoute(route){
  while(routeGroup.children.length){const child=routeGroup.children[0];child.geometry.dispose();child.material.dispose();routeGroup.remove(child);}
  root.dataset.route=route?`${route.id}: ${route.type==='arrival'?'Top gate to bay':'Bay to bottom gate'}`:'';
  if(!route)return;
- const angle=(route.bay-1)*Math.PI/3+Math.PI/12,y=(route.floor-1)*2.35+.65;
+ const angle=bayAngle(route.bay),y=(route.floor-1)*2.35+.65;
  const bay=new THREE.Vector3(10.1*Math.cos(angle),y,10.1*Math.sin(angle)),inner=new THREE.Vector3(3*Math.cos(angle),y,3*Math.sin(angle)),center=new THREE.Vector3(0,y,0),portal=new THREE.Vector3(0,route.type==='arrival'?17:-.2,0);
  const points=route.type==='arrival'?[portal,center,inner,bay]:[bay,inner,center,portal];
  const curve=new THREE.CurvePath();points.slice(1).forEach((point,index)=>curve.add(new THREE.LineCurve3(points[index],point)));
@@ -174,8 +175,8 @@ function showRoute(route){
 }
 
 function focusSpot({floor,bay}){
- if(!Number.isInteger(floor)||!Number.isInteger(bay)||floor<1||floor>6||bay<1||bay>6)return;
- const angle=(bay-1)*Math.PI/3+Math.PI/12,x=10.1*Math.cos(angle),z=10.1*Math.sin(angle),y=(floor-1)*2.35+.8;
+ if(!Number.isInteger(floor)||!Number.isInteger(bay)||floor<1||floor>FLOOR_COUNT||bay<1||bay>BAYS_PER_FLOOR)return;
+ const angle=bayAngle(bay),x=10.1*Math.cos(angle),z=10.1*Math.sin(angle),y=(floor-1)*2.35+.8;
  selected=String(floor);root.querySelectorAll('[data-level]').forEach(button=>button.classList.toggle('active',button.dataset.level===selected));levels.forEach((group,index)=>group.visible=index===floor-1);
  roof.visible=false;
  targetGoal=new THREE.Vector3(x,y,z);cameraGoal=new THREE.Vector3(x-5.5*Math.cos(angle)-5*Math.sin(angle),y+8.5,z-5.5*Math.sin(angle)+5*Math.cos(angle));
@@ -203,7 +204,7 @@ function update(next){currentState=next;if(mode!=='app'||!next)return;
  bayMarkers.forEach(marker=>{const spot=marker.userData,isChoice=next.choice?.floor===spot.floor&&next.choice?.bay===spot.bay;marker.visible=(next.choosing&&available.has(`${spot.floor}-${spot.bay}`))||!!(active&&active.floor===spot.floor&&active.bay===spot.bay);marker.material.color.set(isChoice?'#ffe1a2':'#72d4a4');marker.scale.setScalar(isChoice?1.16:1)});
  const pointerSpot=next.choice;
  assignmentPointer.visible=!!(next.choosing&&pointerSpot&&available.has(`${pointerSpot.floor}-${pointerSpot.bay}`));
- if(assignmentPointer.visible){const angle=(pointerSpot.bay-1)*Math.PI/3+Math.PI/12;assignmentPointer.userData.baseY=(pointerSpot.floor-1)*2.35+1.1;assignmentPointer.position.set(10.1*Math.cos(angle),assignmentPointer.userData.baseY,10.1*Math.sin(angle));}
+ if(assignmentPointer.visible){const angle=bayAngle(pointerSpot.bay);assignmentPointer.userData.baseY=(pointerSpot.floor-1)*2.35+1.1;assignmentPointer.position.set(10.1*Math.cos(angle),assignmentPointer.userData.baseY,10.1*Math.sin(angle));}
  const route=next.route,routeKey=route?`${route.id}-${route.type}-${route.floor}-${route.bay}`:null;
  if(routeKey!==lastRouteKey){showRoute(route);if(route&&!next.choosing)overview();lastRouteKey=routeKey;}
  if(wasChoosing&&!next.choosing&&route)overview();

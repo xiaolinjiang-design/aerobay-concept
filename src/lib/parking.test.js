@@ -60,7 +60,7 @@ test('early departure label compares requested time with booking',()=>{
 });
 
 
-test('a vacated spot becomes reserved again on reassignment and counts still total 36',async()=>{
+test('a vacated spot becomes reserved again on reassignment and counts still total 72',async()=>{
  const {capacityCounts}=await import('./parking.js');
  const state={...initial(),active:null,shaft:'clear',overrides:{'1-1':'available'}};
  const assigned=reducer(state,{type:'assign-spot',id:'C-118',floor:1,bay:1});
@@ -68,5 +68,19 @@ test('a vacated spot becomes reserved again on reassignment and counts still tot
  assert.equal(spaceStatus(assigned,1,1),'reserved');
  assert.equal(after.reserved,before.reserved+1);
  assert.equal(after.available,before.available-1);
- assert.equal(after.available+after.occupied+after.reserved,36);
+ assert.equal(after.available+after.occupied+after.reserved,72);
+});
+
+test('all 72 modeled bays are counted, and bay 12 can be assigned while bay 13 is rejected',async()=>{
+ const {GARAGE_SPOTS,TOTAL_SPOTS}=await import('./garage-layout.js');
+ const {capacityCounts}=await import('./parking.js');
+ assert.equal(TOTAL_SPOTS,72);
+ assert.equal(new Set(GARAGE_SPOTS.map(spot=>`${spot.floor}-${spot.bay}`)).size,72);
+ const state=initial(),assigned=reducer(state,{type:'assign-spot',id:'C-118',floor:4,bay:12});
+ assert.equal(spaceStatus(assigned,4,12),'reserved');
+ assert.ok(assigned.queue.includes('C-118'));
+ assert.equal(reducer(state,{type:'assign-spot',id:'C-118',floor:4,bay:13}),state);
+ const counts=capacityCounts(assigned);
+ assert.equal(counts.total,72);
+ assert.equal(counts.available+counts.occupied+counts.reserved,72);
 });

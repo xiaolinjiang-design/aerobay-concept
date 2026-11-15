@@ -4,7 +4,7 @@ import {vehiclePose,bayPosition,gateOpening} from './vehicle-motion.js';
 import {VEHICLE_TRANSIT_MS,GATE_PHASE_MS} from '../lib/movement-timing.js';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
 test('arrivals descend to each assigned floor before moving into the exact bay',()=>{
- for(let floor=1;floor<=6;floor++)for(let bay=1;bay<=6;bay++){
+ for(let floor=1;floor<=6;floor++)for(let bay=1;bay<=12;bay++){
   const movement={type:'arrival',phase:'transit',floor,bay},destination=bayPosition(movement);
   const turn=vehiclePose(movement,VEHICLE_TRANSIT_MS*.56),end=vehiclePose(movement,VEHICLE_TRANSIT_MS);
   assert.equal(Math.hypot(turn.x,turn.z),0);assert.ok(Math.abs(turn.y-destination.y)<1e-9);

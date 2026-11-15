@@ -1,9 +1,10 @@
+import {bayAngle} from '../lib/garage-layout.js';
 import {GATE_PHASE_MS,VEHICLE_TRANSIT_MS} from '../lib/movement-timing.js';
 
 const clamp=value=>Math.max(0,Math.min(1,value));
 const ease=value=>{const t=clamp(value);return t*t*(3-2*t)};
 export function bayPosition({floor,bay}){
- const angle=(bay-1)*Math.PI/3+Math.PI/12;
+ const angle=bayAngle(bay);
  return {x:10.1*Math.cos(angle),y:(floor-1)*2.35+.43,z:10.1*Math.sin(angle),angle};
 }
 export function vehiclePose(movement,elapsed=0){
