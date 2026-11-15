@@ -63,3 +63,5 @@ html,body,#root{margin:0;min-width:320px;min-height:100%;background:#010102}body
  #halo-linear-app .isometric-stage,#halo-linear-app .isometric-stage.floor-focus{margin:160px 290px 24px 300px}
  #halo-linear-app .spot-assignment{bottom:20px;left:380px;right:340px}
 }
+
+#halo-linear-app .floor-dropdown{display:flex;align-items:center;position:relative;gap:8px;color:var(--secondary)}#halo-linear-app .floor-dropdown select{appearance:none;font:inherit;font-size:12px;background:var(--panel);color:var(--foreground);border:1px solid var(--border-strong);border-radius:7px;min-height:38px;padding:9px 32px 9px 32px;width:140px;cursor:pointer;color-scheme:dark}#halo-linear-app .floor-dropdown>svg{position:absolute;pointer-events:none}#halo-linear-app .floor-dropdown>svg:first-child{left:11px}#halo-linear-app .floor-dropdown>svg:last-child{right:11px}#halo-linear-app .floor-dropdown select:focus-visible{outline:2px solid var(--primary);outline-offset:3px}@media(min-width:1000px){#halo-linear-app .scene-toolbar{width:auto;padding:0;border:0;background:transparent;box-shadow:none}}

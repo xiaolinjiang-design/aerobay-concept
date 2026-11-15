@@ -1,5 +1,5 @@
 import React,{useEffect,useState,useRef} from 'react';
-import {Layers,ZoomIn,Zap,ArrowDown,ArrowUp} from 'lucide-react';
+import {ChevronDown,Layers,ZoomIn,Zap,ArrowDown,ArrowUp} from 'lucide-react';
 import {Button} from './ui/button';
 import {Popover,PopoverAnchor,PopoverContent,PopoverClose} from './ui/popover';
 import {X,Check} from 'lucide-react';
@@ -55,7 +55,7 @@ useEffect(()=>{if(state.choosing){setFocus(null);setInspected(null);}},[state.ch
  const timing=car?parkingTime(car):null;
  const active=state.active;let vehicle=null,flightPath=null;if(active&&active.id!=='C-204'&&active.phase!=='confirming'){let loc=location(active.floor,active.bay),t=active.phase==='transit'?progress/100:0;if(active.type==='departure')t=1-t;let lateral=Math.max(0,(t-.72)/.28),y=165+(loc.y-165)*Math.min(t/.72,1);vehicle=<Vehicle x={loc.x*lateral} y={y+2} z={loc.z*lateral} angle={ANGLES[active.bay-1]+90} active/>;flightPath=<polyline points={pathPoints([[0,165,0],[0,loc.y,0],[loc.x,loc.y,loc.z]])} fill="none" stroke="#9b9de0" strokeWidth="2" strokeDasharray="4 5"/>;}
  const viewBox=focus?`70 ${215-(focus-1)*43.4} 460 260`:'50 55 500 515';
- return <section className="iso-garage"><div className="scene-toolbar"><span className="scene-title"><Layers size={13}/>{focus?'Floor '+focus:'Garage'}</span><div className="scene-floor-picker"><Button variant="ghost" size="sm" aria-pressed={!focus} onClick={()=>{setFocus(null);setInspected(null);}}>All</Button>{[6,5,4,3,2,1].map(f=><Button key={f} variant="ghost" size="sm" aria-pressed={focus===f} onClick={()=>{setFocus(f);setInspected(null);}}>F{f}</Button>)}</div></div><div className={`isometric-stage ${focus?'floor-focus':''}`}>
+ return <section className="iso-garage"><div className="scene-toolbar"><div className="floor-dropdown"><Layers size={13}/><select aria-label="Select floor" value={focus||'all'} onChange={e=>{setFocus(e.target.value==='all'?null:Number(e.target.value));setInspected(null);}}><option value="all">All floors</option>{[6,5,4,3,2,1].map(f=><option key={f} value={f}>Floor {f}</option>)}</select><ChevronDown size={13}/></div></div><div className={`isometric-stage ${focus?'floor-focus':''}`}>
  <svg className="garage-svg" viewBox={viewBox} role="group" aria-label="Isometric donut-shaped garage with six floors, parked vehicles, and a shared central shaft"><defs><radialGradient id="garage-ambient"><stop offset="0" stopColor="#526477" stopOpacity=".14"/><stop offset="1" stopColor="#0a0d12" stopOpacity="0"/></radialGradient></defs><ellipse cx="300" cy="430" rx="250" ry="115" fill="url(#garage-ambient)"/>
  {!focus&&<g opacity=".15" stroke="#73808c" strokeWidth=".6">{[-120,-80,-40,0,40,80,120].map(v=><g key={v}><line x1={project(v,-5,-120)[0]} y1={project(v,-5,-120)[1]} x2={project(v,-5,120)[0]} y2={project(v,-5,120)[1]}/><line x1={project(-120,-5,v)[0]} y1={project(-120,-5,v)[1]} x2={project(120,-5,v)[0]} y2={project(120,-5,v)[1]}/></g>)}</g>}
  {!focus&&[1,2,3,4,5,6].map(f=><g key={f}><Floor floor={f} state={{...state,choice:inspected||state.choice}} focused={false} choosing={false} send={send} onInspect={inspect}/></g>)}
