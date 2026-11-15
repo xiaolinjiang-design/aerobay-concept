@@ -170,8 +170,13 @@ function showRoute(route){
  const bay=new THREE.Vector3(10.1*Math.cos(angle),y,10.1*Math.sin(angle)),inner=new THREE.Vector3(3*Math.cos(angle),y,3*Math.sin(angle)),center=new THREE.Vector3(0,y,0),portal=new THREE.Vector3(0,route.type==='arrival'?17:-.2,0);
  const points=route.type==='arrival'?[portal,center,inner,bay]:[bay,inner,center,portal];
  const curve=new THREE.CurvePath();points.slice(1).forEach((point,index)=>curve.add(new THREE.LineCurve3(points[index],point)));
- for(const [radius,opacity,color] of [[.065,.1,'#c5d0df'],[.025,.9,'#dce5ee']]){const trail=mesh(new THREE.TubeGeometry(curve,100,radius,8,false),new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthTest:true,depthWrite:false}),routeGroup);trail.renderOrder=0;trail.castShadow=false;}
- const end=mesh(new THREE.SphereGeometry(.12,16,12),new THREE.MeshBasicMaterial({color:'#dce5ee',depthTest:true}),routeGroup);end.position.copy(points.at(-1));end.renderOrder=0;end.castShadow=false;
+ const routeColor=new THREE.Color(getComputedStyle(root).getPropertyValue('--primary').trim()||'#5e6ad2');
+ for(const [radius,opacity] of [[.16,.035],[.085,.12],[.035,.98]]){
+  const trail=mesh(new THREE.TubeGeometry(curve,100,radius,12,false),new THREE.MeshBasicMaterial({color:routeColor,transparent:true,opacity,blending:radius>.035?THREE.AdditiveBlending:THREE.NormalBlending,toneMapped:false,depthTest:true,depthWrite:false}),routeGroup);
+  trail.castShadow=false;
+ }
+ const end=mesh(new THREE.SphereGeometry(.12,16,12),new THREE.MeshBasicMaterial({color:routeColor,toneMapped:false,depthTest:true}),routeGroup);end.position.copy(points.at(-1));end.castShadow=false;
+ const endGlow=mesh(new THREE.SphereGeometry(.23,16,12),new THREE.MeshBasicMaterial({color:routeColor,transparent:true,opacity:.09,blending:THREE.AdditiveBlending,toneMapped:false,depthTest:true,depthWrite:false}),routeGroup);endGlow.position.copy(end.position);endGlow.castShadow=false;
 }
 
 function focusSpot({floor,bay}){
