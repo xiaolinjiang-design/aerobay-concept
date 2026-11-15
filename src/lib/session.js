@@ -1,4 +1,4 @@
-import { initial } from './parking';
+import { initial, rebalanceDemoRequests } from './parking';
 const storageKey = 'halo-parking-session-v2';
 export function loadSession() {
   try {
@@ -13,7 +13,7 @@ export function loadSession() {
     if (!['occupied', 'reserved', 'checking', 'clear'].includes(state.shaft)) return initial();
     if (!state.overrides || typeof state.overrides !== 'object') return initial();
     const defaults = initial().requests;
-    return {...state, requests:[...defaults.filter(r=>!ids.has(r.id)),...state.requests.map(r=>({...r,arrival:r.arrival||defaults.find(d=>d.id===r.id).arrival,departure:r.departure==='Now'?'14:35':r.departure}) )]};
+    return rebalanceDemoRequests({...state, requests:[...defaults.filter(r=>!ids.has(r.id)),...state.requests.map(r=>({...r,arrival:r.arrival||defaults.find(d=>d.id===r.id).arrival,departure:r.departure==='Now'?'14:35':r.departure}) )]});
   } catch {
     return initial();
   }

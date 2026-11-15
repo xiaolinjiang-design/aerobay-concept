@@ -84,3 +84,20 @@ test('all 72 modeled bays are counted, and bay 12 can be assigned while bay 13 i
  assert.equal(counts.total,72);
  assert.equal(counts.available+counts.occupied+counts.reserved,72);
 });
+
+
+test('demo request rebalance converts half the arrivals once, using unique occupied bays only',async()=>{
+ const {rebalanceDemoRequests}=await import('./parking.js');
+ const state={...initial(),active:null,requests:[...initial().requests.filter(r=>r.type==='departure'),...Array.from({length:10},(_,i)=>({id:`A-${i}`,type:'arrival',status:'new',arrival:'14:45',departure:'17:30'}))],selected:'A-0',choosing:true,choice:{floor:4,bay:6}};
+ const next=rebalanceDemoRequests(state),converted=next.requests.filter(r=>r.id.startsWith('A-')&&r.type==='departure');
+ assert.equal(converted.length,5);
+ assert.equal(new Set(converted.map(r=>`${r.floor}-${r.bay}`)).size,5);
+ assert.ok(converted.every(r=>spaceStatus(state,r.floor,r.bay)==='occupied'));
+ assert.deepEqual(next.queue,state.queue);
+ assert.equal(next.choosing,false);
+ assert.equal(next.requests.length,state.requests.length);
+ assert.equal(rebalanceDemoRequests(next),next);
+ const full={...state,requests:Array.from({length:136},(_,i)=>({id:`A-${i}`,type:'arrival',status:'new',arrival:'14:45',departure:'17:30'}))};
+ const limited=rebalanceDemoRequests(full);
+ assert.equal(limited.requests.filter(r=>r.type==='departure').length,48);
+});

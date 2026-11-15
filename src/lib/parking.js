@@ -63,3 +63,19 @@ export function earlyDeparture(request){
  const booking=request.bookedDeparture||([`C-${300+request.floor*10+request.bay}`,`C-${300+request.floor*100+request.bay}`].includes(request.id)?['16:30','17:00','18:00'][request.floor%3]:null);
  return booking&&request.departure<booking?booking:null;
 }
+
+export function rebalanceDemoRequests(state){
+ if(state.departureMixVersion===1)return state;
+ const arrivals=state.requests.filter(r=>r.type==='arrival'&&r.status==='new');
+ const departures=state.requests.filter(r=>r.type==='departure'&&r.status!=='complete');
+ const unavailable=new Set(departures.map(key));
+ if(state.active)unavailable.add(key(state.active));
+ const candidates=GARAGE_SPOTS.filter(spot=>spaceStatus(state,spot.floor,spot.bay)==='occupied'&&!unavailable.has(key(spot)));
+ const count=arrivals.length>departures.length?Math.min(Math.floor(arrivals.length/2),candidates.length):0;
+ const replacements=new Map(arrivals.slice(0,count).map((request,index)=>{
+  const spot=candidates[index],vehicle=parkedVehicle(state,spot.floor,spot.bay);
+  return [request.id,{...request,...spot,type:'departure',arrival:vehicle.arrival,departure:request.arrival,bookedDeparture:vehicle.bookedDeparture||vehicle.departure}];
+ }));
+ const selectedChanged=replacements.has(state.selected);
+ return {...state,departureMixVersion:1,requests:state.requests.map(request=>replacements.get(request.id)||request),...(selectedChanged?{choosing:false,choice:null}:{})};
+}
