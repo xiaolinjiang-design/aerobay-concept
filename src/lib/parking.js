@@ -1,4 +1,4 @@
-export const initial=()=>({requests:[{id:'C-118',type:'arrival',status:'new',floor:null,bay:null,arrival:'14:32',departure:'17:30'},{id:'C-076',type:'departure',status:'new',floor:2,bay:1,arrival:'10:15',departure:'14:35'}],queue:[],active:{id:'C-204',type:'departure',floor:3,bay:2,phase:'transit'},shaft:'occupied',selected:'C-118',choosing:false,choice:null,event:'C-118 requested parking.',overrides:{}});
+export const initial=()=>({requests:[{id:'C-118',type:'arrival',status:'new',floor:null,bay:null,arrival:'14:32',departure:'17:30'},{id:'C-076',type:'departure',status:'new',floor:2,bay:1,arrival:'10:15',departure:'14:35'},{id:'C-231',type:'arrival',status:'new',floor:null,bay:null,arrival:'14:36',departure:'18:00'},{id:'C-442',type:'departure',status:'new',floor:5,bay:3,arrival:'11:45',departure:'14:40'},{id:'C-305',type:'arrival',status:'new',floor:null,bay:null,arrival:'14:38',departure:'16:45'},{id:'C-189',type:'departure',status:'new',floor:1,bay:4,arrival:'09:30',departure:'14:45'}],queue:[],active:{id:'C-204',type:'departure',floor:3,bay:2,phase:'transit'},shaft:'occupied',selected:'C-118',choosing:false,choice:null,event:'C-118 requested parking.',overrides:{}});
 export const key=r=>r.floor+'-'+r.bay;
 export const place=r=>'F'+r.floor+' · '+String(r.bay).padStart(2,'0');
 const baseEmpty=(f,n)=>(f+n)%3===1;
@@ -19,3 +19,15 @@ export function reducer(s,a){switch(a.type){
  case'finish':{let r=s.active;if(!r||r.id==='C-204')return s;return{...s,active:null,shaft:'checking',requests:s.requests.map(x=>x.id===r.id?{...x,status:'complete'}:x),overrides:{...s.overrides,[key(r)]:r.type==='arrival'?'occupied':'available'},event:r.id+(r.type==='arrival'?' parked.':' departed.')+' Confirming the shaft is empty.'};}
  default:return s;
 }}
+
+export function parkedVehicle(state,floor,bay){
+ const request=state.requests.find(r=>r.floor===floor&&r.bay===bay&&(r.type==='departure'&&r.status!=='complete'||r.type==='arrival'&&r.status==='complete'));
+ return request||{id:`C-${300+floor*10+bay}`,arrival:['09:30','10:15','11:00'][bay%3],departure:['16:30','17:00','18:00'][floor%3]};
+}
+export function parkingTime(car){
+ const minutes=t=>{const [h,m]=t.split(':').map(Number);return h*60+m;};
+ const start=minutes(car.arrival),end=minutes(car.departure),now=14*60+32;
+ const duration=end>=start?end-start:end+1440-start,elapsed=Math.max(0,Math.min(duration,now-start));
+ const format=m=>`${Math.floor(m/60)}h ${m%60}m`;
+ return {percent:duration?elapsed/duration*100:0,elapsed:format(elapsed),remaining:format(duration-elapsed)};
+}
