@@ -2,7 +2,8 @@ export const initial=()=>({requests:[{id:'C-118',type:'arrival',status:'new',flo
 export const key=r=>r.floor+'-'+r.bay;
 export const place=r=>'F'+r.floor+' · '+String(r.bay).padStart(2,'0');
 const baseEmpty=(f,n)=>(f+n)%3===1;
-export function spaceStatus(s,f,n){let k=f+'-'+n;if(s.overrides[k])return s.overrides[k];if(s.requests.some(r=>r.type==='arrival'&&r.status!=='new'&&r.status!=='complete'&&key(r)===k))return'reserved';return baseEmpty(f,n)?'available':'occupied';}
+export function spaceStatus(s,f,n){let k=f+'-'+n;if(s.requests.some(r=>r.type==='arrival'&&(r.status==='queued'||r.status==='active')&&key(r)===k))return'reserved';if(s.overrides[k])return s.overrides[k];return baseEmpty(f,n)?'available':'occupied';}
+export function capacityCounts(state){const counts={available:0,occupied:0,reserved:0,total:36};for(let floor=1;floor<=6;floor++)for(let bay=1;bay<=6;bay++)counts[spaceStatus(state,floor,bay)]++;return counts;}
 export function reducer(s,a){switch(a.type){
  case'reset':return initial();
  case'new-request':return addTimedRequest(s);

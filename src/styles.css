@@ -167,3 +167,28 @@ html[data-input=keyboard] #halo-linear-app .spot-assignment,html[data-input=keyb
 #halo-linear-app .gate-waiting-summary dd{margin:0;color:var(--foreground);font-size:11px}
 @media(min-width:1000px){#halo-linear-app .overview-row .occupancy-overview{justify-content:flex-start;gap:8px;padding:12px}}
 @media(max-width:999px){#halo-linear-app .gate-waiting-summary{width:auto;min-width:110px;margin-left:auto}}
+
+#halo-linear-app .capacity-heading{display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px}
+#halo-linear-app .capacity-heading strong{font-size:21px;line-height:1.1}
+#halo-linear-app .capacity-heading strong .secondary{font-size:11px}
+#halo-linear-app .capacity-percent{background:var(--hover);color:var(--secondary);font-size:10px;line-height:18px;padding:0 5px;border-radius:4px}
+#halo-linear-app .capacity-bar{display:flex;width:100%;height:6px;gap:2px;overflow:hidden;border-radius:4px;background:var(--border)}
+#halo-linear-app .capacity-segment{flex-basis:0;min-width:0}
+#halo-linear-app .capacity-available{background:#6db58e}
+#halo-linear-app .capacity-occupied{background:#7b8da5}
+#halo-linear-app .capacity-reserved{background:#8883d7}
+#halo-linear-app .capacity-breakdown{display:grid;width:100%;gap:5px;margin:0;font-size:10px;line-height:1.2}
+#halo-linear-app .capacity-breakdown>div{display:grid;grid-template-columns:1fr 22px 30px;gap:7px;align-items:center}
+#halo-linear-app .capacity-breakdown dt{display:flex;align-items:center;gap:6px;color:var(--secondary)}
+#halo-linear-app .capacity-swatch{width:6px;height:6px;border-radius:2px;flex-shrink:0}
+#halo-linear-app .capacity-breakdown dd{margin:0;text-align:right}
+#halo-linear-app .capacity-share{color:var(--muted)}
+#halo-linear-app .occupancy-overview .gate-waiting-summary{margin:0;width:100%}
+#halo-linear-app .occupancy-overview .gate-waiting-title{margin-bottom:4px;font-size:8px}
+#halo-linear-app .occupancy-overview .gate-waiting-summary dl{grid-template-columns:1fr 1fr;gap:12px;font-size:9px}
+#halo-linear-app .occupancy-overview .gate-waiting-summary dd{font-size:10px}
+@media(min-width:1000px){
+ #halo-linear-app .overview-row .occupancy-overview{width:200px;gap:9px;padding:12px}
+ #halo-linear-app .overview-row .movement-timeline{left:492px}
+}
+@media(max-width:999px){#halo-linear-app .overview-row .occupancy-overview{display:flex;flex-direction:column;align-items:stretch;min-width:200px;gap:10px}}

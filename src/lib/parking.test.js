@@ -58,3 +58,15 @@ test('early departure label compares requested time with booking',()=>{
  assert.equal(earlyDeparture({type:'arrival',departure:'14:34',bookedDeparture:'17:00'}),null);
  assert.equal(earlyDeparture({type:'departure',id:'C-311',floor:1,bay:1,departure:'14:34'}),'17:00');
 });
+
+
+test('a vacated spot becomes reserved again on reassignment and counts still total 36',async()=>{
+ const {capacityCounts}=await import('./parking.js');
+ const state={...initial(),active:null,shaft:'clear',overrides:{'1-1':'available'}};
+ const assigned=reducer(state,{type:'assign-spot',id:'C-118',floor:1,bay:1});
+ const before=capacityCounts(state),after=capacityCounts(assigned);
+ assert.equal(spaceStatus(assigned,1,1),'reserved');
+ assert.equal(after.reserved,before.reserved+1);
+ assert.equal(after.available,before.available-1);
+ assert.equal(after.available+after.occupied+after.reserved,36);
+});
