@@ -48,7 +48,7 @@ export default function GarageScene({state,send,progress}){
  const arrivals=state.requests.filter(r=>r.type==='arrival'&&r.status==='new');
  const selectedArrival=arrivals.find(r=>r.id===assignCar)||arrivals.find(r=>r.id===state.selected)||arrivals[0];
  function inspect(spot,element){lastTrigger.current=element;const bounds=element?.getBoundingClientRect();if(bounds)anchorRef.current={contextElement:element,getBoundingClientRect:()=>element?.isConnected?element.getBoundingClientRect():bounds};setInspected(spot);setAssignCar(state.selected);}
-useEffect(()=>{if(state.choosing)setFocus(4);},[state.choosing]);useEffect(()=>{if(state.choice){setFocus(state.choice.floor);if(!inspected||inspected.floor!==state.choice.floor||inspected.bay!==state.choice.bay){anchorRef.current=null;setInspected(state.choice);setAssignCar(state.selected);}}},[state.choice]);
+useEffect(()=>{if(state.choosing){setFocus(null);setInspected(null);}},[state.choosing,state.selected]);useEffect(()=>{if(state.choice){setFocus(state.choice.floor);if(!inspected||inspected.floor!==state.choice.floor||inspected.bay!==state.choice.bay){anchorRef.current=null;setInspected(state.choice);setAssignCar(state.selected);}}},[state.choice]);
  useEffect(()=>{if(inspected&&spaceStatus(state,inspected.floor,inspected.bay)==='reserved')setInspected(null);},[state.requests,state.overrides]);useEffect(()=>{if(state.active&&state.active.id!=='C-204')setFocus(null);},[state.active?.id]);
  const occupied=inspected&&spaceStatus(state,inspected.floor,inspected.bay)==='occupied';
  const car=occupied?parkedVehicle(state,inspected.floor,inspected.bay):null;
