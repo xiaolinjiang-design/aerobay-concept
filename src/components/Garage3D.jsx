@@ -24,6 +24,7 @@ export default function Garage3D({ state, progress = 0, onSpotClick, className =
     choosing: state.choosing,
     choice: state.choice,
     suggestedBays: suggestedSpots(state),
+    route: state.active?.id!=='C-204'&&state.active||state.requests.find(r=>r.id===state.selected&&r.status==='queued')||state.requests.find(r=>r.id===state.queue[0])||null,
     active: state.active,
     progress,
   }), [state, progress]);

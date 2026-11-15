@@ -154,7 +154,25 @@ function setPhase(phase,note){gateState.phase=phase;phaseStart=performance.now()
 admitButton.addEventListener('click',()=>{if(admitButton.disabled)return;flying.position.y=17;setPhase('entryOpening','Top gate opening')});
 releaseButton.addEventListener('click',()=>{if(releaseButton.disabled)return;flying.position.y=7;setPhase('exitOpening','Bottom gate opening')});setPhase('empty');
 const hiddenMatrix=new THREE.Matrix4().makeScale(0,0,0);
-let cameraGoal=null,targetGoal=null,lastFocusKey=null,wasChoosing=false;
+let cameraGoal=null,targetGoal=null,lastFocusKey=null,wasChoosing=false,lastRouteKey=null;
+const routeGroup=new THREE.Group();garage.add(routeGroup);
+function overview(){
+ selected='all';root.querySelectorAll('[data-level]').forEach(button=>button.classList.toggle('active',button.dataset.level==='all'));levels.forEach(group=>group.visible=true);roof.visible=false;
+ const scale=Math.max(1,1.05/camera.aspect)*1.28;cameraGoal=new THREE.Vector3(25*scale,5+17*scale,29*scale);targetGoal=new THREE.Vector3(0,6.5,0);
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches){camera.position.copy(cameraGoal);controls.target.copy(targetGoal);cameraGoal=null;targetGoal=null;}
+}
+function showRoute(route){
+ while(routeGroup.children.length){const child=routeGroup.children[0];child.geometry.dispose();child.material.dispose();routeGroup.remove(child);}
+ root.dataset.route=route?`${route.id}: ${route.type==='arrival'?'Top gate to bay':'Bay to bottom gate'}`:'';
+ if(!route)return;
+ const angle=(route.bay-1)*Math.PI/3+Math.PI/12,y=(route.floor-1)*2.35+.65;
+ const bay=new THREE.Vector3(10.1*Math.cos(angle),y,10.1*Math.sin(angle)),inner=new THREE.Vector3(3*Math.cos(angle),y,3*Math.sin(angle)),center=new THREE.Vector3(0,y,0),portal=new THREE.Vector3(0,route.type==='arrival'?17:-.2,0);
+ const points=route.type==='arrival'?[portal,new THREE.Vector3(0,y+1,0),center,inner,bay]:[bay,inner,center,new THREE.Vector3(0,y-1,0),portal];
+ const curve=new THREE.CatmullRomCurve3(points,false,'centripetal');
+ for(const [radius,opacity,color] of [[.14,.18,'#a6afff'],[.035,1,'#e0e5ff']]){const trail=mesh(new THREE.TubeGeometry(curve,100,radius,8,false),new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthTest:false,depthWrite:false}),routeGroup);trail.renderOrder=15;trail.castShadow=false;}
+ const end=mesh(new THREE.SphereGeometry(.18,16,12),new THREE.MeshBasicMaterial({color:'#b9b5ff',depthTest:false}),routeGroup);end.position.copy(points.at(-1));end.renderOrder=16;end.castShadow=false;
+}
+
 function focusSpot({floor,bay}){
  if(!Number.isInteger(floor)||!Number.isInteger(bay)||floor<1||floor>6||bay<1||bay>6)return;
  const angle=(bay-1)*Math.PI/3+Math.PI/12,x=10.1*Math.cos(angle),z=10.1*Math.sin(angle),y=(floor-1)*2.35+.8;
@@ -182,7 +200,10 @@ function update(next){currentState=next;if(mode!=='app'||!next)return;
  const pointerSpot=next.choice;
  assignmentPointer.visible=!!(next.choosing&&pointerSpot&&available.has(`${pointerSpot.floor}-${pointerSpot.bay}`));
  if(assignmentPointer.visible){const angle=(pointerSpot.bay-1)*Math.PI/3+Math.PI/12;assignmentPointer.userData.baseY=(pointerSpot.floor-1)*2.35+1.1;assignmentPointer.position.set(10.1*Math.cos(angle),assignmentPointer.userData.baseY,10.1*Math.sin(angle));}
- const spot=next.choice||(next.choosing&&!wasChoosing?next.suggestedBays?.[0]:null);const focusKey=spot?`${spot.floor}-${spot.bay}`:null;
+ const route=next.route,routeKey=route?`${route.id}-${route.type}-${route.floor}-${route.bay}`:null;
+ if(routeKey!==lastRouteKey){showRoute(route);if(route&&!next.choosing)overview();lastRouteKey=routeKey;}
+ if(wasChoosing&&!next.choosing&&route)overview();
+ const spot=next.choice;const focusKey=spot?`${spot.floor}-${spot.bay}`:null;
  if(spot&&focusKey!==lastFocusKey){focusSpot(spot);lastFocusKey=focusKey}
  if(!next.choosing)lastFocusKey=null;wasChoosing=next.choosing;
 }
