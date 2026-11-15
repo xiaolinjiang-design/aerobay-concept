@@ -117,3 +117,5 @@ html[data-input=keyboard] #halo-linear-app .spot-assignment,html[data-input=keyb
 #halo-linear-app .garage-3d-root .floor-control{top:250px;right:18px}
 @media(max-width:1100px){#halo-linear-app .garage-3d-root{left:245px;right:285px}#halo-linear-app .garage-view-switch{left:260px}}
 @media(max-width:760px){#halo-linear-app .garage-3d-root{left:0;right:0}#halo-linear-app .garage-view-switch{left:16px}}
+
+#halo-linear-app .iso-garage{--bay-border:#526073;--bay-available:#66a889;--bay-available-raised:#84c7a4;--bay-available-fill:#66a88910;--bay-hover-fill:#66a88926;--bay-selected-fill:#71b98d38;--bay-selected:#afe4c5} @media(min-width:1000px){#halo-linear-app.dispatch-flow .app-columns{background:radial-gradient(ellipse at 52% 48%,#121923 0,#090d13 45%,#070a0f 80%)}}

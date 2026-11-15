@@ -11,12 +11,12 @@ const location=(floor,bay)=>{let a=ANGLES[bay-1]*Math.PI/180;return{x:57*Math.co
 function project(x,y,z){return[300+(x-z)*.866*1.55,380+(x+z)*.5*1.55-y*1.55];}
 const p=(x,y,z)=>project(x,y,z).map(v=>v.toFixed(2)).join(',');
 const pathPoints=points=>points.map(v=>p(...v)).join(' ');
-function Box({x,y,z,w=9,h=4,l=18,angle=0,body='#b4bec9',roof='#d2d9df',glass=false}){
+function Box({x,y,z,w=9,h=4,l=18,angle=0,body='#4b535e',roof='#606a77',glass=false}){
  const a=angle*Math.PI/180,c=Math.cos(a),sn=Math.sin(a),point=(u,v,t)=>[x+u*c+t*sn,y+v,z-u*sn+t*c];
  const b=[point(-w/2,0,-l/2),point(w/2,0,-l/2),point(w/2,0,l/2),point(-w/2,0,l/2)],t=b.map(v=>[v[0],v[1]+h,v[2]]);
- return <g><polygon points={pathPoints([b[0],b[1],t[1],t[0]])} fill={glass?'#303c47':'#6c7884'}/><polygon points={pathPoints([b[1],b[2],t[2],t[1]])} fill={glass?'#374550':'#8b98a4'}/><polygon points={pathPoints([b[2],b[3],t[3],t[2]])} fill={body}/><polygon points={pathPoints([b[3],b[0],t[0],t[3]])} fill={glass?'#26333e':'#7b8997'}/><polygon points={pathPoints(t)} fill={roof} stroke="#d1dae1" strokeOpacity=".25" strokeWidth=".4"/></g>;
+ return <g><polygon points={pathPoints([b[0],b[1],t[1],t[0]])} fill={glass?'#18212c':'#252c35'}/><polygon points={pathPoints([b[1],b[2],t[2],t[1]])} fill={glass?'#202a35':'#343d48'}/><polygon points={pathPoints([b[2],b[3],t[3],t[2]])} fill={body}/><polygon points={pathPoints([b[3],b[0],t[0],t[3]])} fill={glass?'#131c26':'#303945'}/><polygon points={pathPoints(t)} fill={roof} stroke="#7a8797" strokeOpacity=".25" strokeWidth=".4"/></g>;
 }
-function Vehicle({x,y,z,angle,active=false}){return <g><ellipse cx={project(x,y,z)[0]} cy={project(x,y,z)[1]+3} rx="15" ry="5" fill="#000" opacity=".22"/><Box x={x} y={y} z={z} angle={angle} body={active?'#c2cce2':'#9fabb7'} roof={active?'#eff1f5':'#cbd2d9'}/><Box x={x} y={y+4} z={z} w={7.6} h={3.2} l={9} angle={angle} body="#42525f" roof="#52636f" glass/><Box x={x} y={y+7.2} z={z} w={6.8} h={.7} l={6} angle={angle} body="#b7c1ca" roof={active?'#e8ecf2':'#aebbc5'}/></g>;}
+function Vehicle({x,y,z,angle,active=false}){return <g><ellipse cx={project(x,y,z)[0]} cy={project(x,y,z)[1]+3} rx="15" ry="5" fill="#000" opacity=".22"/><Box x={x} y={y} z={z} angle={angle} body={active?'#7f8fae':'#434d5b'} roof={active?'#a2b1ce':'#657182'}/><Box x={x} y={y+4} z={z} w={7.6} h={3.2} l={9} angle={angle} body="#1a2533" roof="#293747" glass/><Box x={x} y={y+7.2} z={z} w={6.8} h={.7} l={6} angle={angle} body="#4d5867" roof={active?'#8e9db9':'#596575'}/></g>;}
 function BayMark({corners,status,selected}){
  const empty=status==='available';
  const interpolate=(a,b,t)=>a.map((v,i)=>v+(b[i]-v)*t);
@@ -28,7 +28,7 @@ function BayMark({corners,status,selected}){
 function Floor({floor,focused,state,choosing,send,onInspect}){
  const [hoveredBay,setHoveredBay]=useState(null);
  const y=(floor-1)*28,pt=(r,a,dy=0)=>[r*Math.cos(a),y+dy,r*Math.sin(a)];
- let parts=[];for(let i=0;i<56;i++){const a=i*Math.PI/28,b=(i+1)*Math.PI/28;const cut=!focused&&i>5&&i<21;if(cut)continue;parts.push(<g key={i}><polygon points={pathPoints([pt(R,a,-3),pt(R,b,-3),pt(R,b),pt(R,a)])} fill="#202933" stroke="#3c4752" strokeWidth=".35"/><polygon points={pathPoints([pt(INNER,a),pt(R,a),pt(R,b),pt(INNER,b)])} fill={i<28?'#303b46':'#35414d'} stroke="#54616d" strokeOpacity=".3" strokeWidth=".3"/><polygon points={pathPoints([pt(INNER,a,-3),pt(INNER,a),pt(INNER,b),pt(INNER,b,-3)])} fill="#52616d"/></g>);}
+ let parts=[];for(let i=0;i<56;i++){const a=i*Math.PI/28,b=(i+1)*Math.PI/28;const cut=!focused&&i>5&&i<21;if(cut)continue;parts.push(<g key={i}><polygon points={pathPoints([pt(R,a,-3),pt(R,b,-3),pt(R,b),pt(R,a)])} fill="#11161d" stroke="#303946" strokeWidth=".35"/><polygon points={pathPoints([pt(INNER,a),pt(R,a),pt(R,b),pt(INNER,b)])} fill={i<28?'#1c242e':'#232d38'} stroke="#465261" strokeOpacity=".3" strokeWidth=".3"/><polygon points={pathPoints([pt(INNER,a,-3),pt(INNER,a),pt(INNER,b),pt(INNER,b,-3)])} fill="#354252"/></g>);}
  let route=[];for(let i=0;i<=56;i++){let a=i*Math.PI/28;if(!focused&&i>5&&i<21)continue;route.push(project(...pt(37,a,.1)).join(','));}
  const spots=Array.from({length:6},(_,i)=>{if(!focused&&ANGLES[i]>32&&ANGLES[i]<135)return null;let bay=i+1,loc=location(floor,bay),angle=ANGLES[i]+90,status=spaceStatus(state,floor,bay),selected=state.choice?.floor===floor&&state.choice?.bay===bay,charging=bay===6,activeHere=state.active?.floor===floor&&state.active?.bay===bay;
  const a=angle*Math.PI/180,c=Math.cos(a),sn=Math.sin(a),corners=[[-8,-14],[8,-14],[8,14],[-8,14]].map(([u,t])=>[loc.x+u*c+t*sn,y+.3,loc.z-u*sn+t*c]);
@@ -39,11 +39,11 @@ function Floor({floor,focused,state,choosing,send,onInspect}){
 
  {charging&&<polygon className="charging-edge" points={pathPoints(corners.slice(0,2).concat(corners.slice(0,2).reverse().map(v=>[v[0],v[1],v[2]+1])))} fill="#8bb8be"/>}
  {status==='occupied'&&!activeHere&&<Vehicle {...loc} y={y+.8} angle={angle}/>}
- {(focused||selected)&&<text className="bay-number" x={project(loc.x,y,loc.z)[0]} y={project(loc.x,y,loc.z)[1]+22} textAnchor="middle" fill={status==='available'?'#c2dad1':'#bac4cd'} fontSize="12" fontFamily="ui-monospace, monospace">{String(bay).padStart(2,'0')}</text>}
+ {(focused||selected)&&<text className="bay-number" x={project(loc.x,y,loc.z)[0]} y={project(loc.x,y,loc.z)[1]+22} textAnchor="middle" fill={status==='available'?'#c2dad1':'#a1adbe'} fontSize="12" fontFamily="ui-monospace, monospace">{String(bay).padStart(2,'0')}</text>}
  {enabled&&hoveredBay===bay&&<g className="bay-hover-label" transform={`translate(${project(loc.x,y,loc.z)[0]},${project(loc.x,y+12,loc.z)[1]-18})`} aria-hidden="true"><path d="M-55,-12 H55 V9 H4 L0,13 L-4,9 H-55 Z"/><text textAnchor="middle" y="2">{status==='available'?'Available':'Occupied'} · F{floor}-{String(bay).padStart(2,'0')}</text></g>}
  </g>;
  }).filter(Boolean).sort((a,b)=>{const la=location(floor,+a.key),lb=location(floor,+b.key);return la.x+la.z-lb.x-lb.z;});
- return <g data-floor-layer={floor}>{parts}<polyline points={route.join(' ')} fill="none" stroke="#b7c0c9" strokeWidth=".6" strokeOpacity=".5" strokeDasharray="4 6"/>{spots}</g>;
+ return <g data-floor-layer={floor}>{parts}<polyline points={route.join(' ')} fill="none" stroke="#8796a8" strokeWidth=".6" strokeOpacity=".5" strokeDasharray="4 6"/>{spots}</g>;
 }
 export default function GarageScene({state,send,progress}){
  const[focus,updateFocus]=useState(null),[inspected,setInspected]=useState(null),[assignCar,setAssignCar]=useState('');const anchorRef=useRef(null),lastTrigger=useRef(null),sceneRef=useRef(null);
@@ -95,7 +95,7 @@ useEffect(()=>{if(state.choosing){setFocus(null);setInspected(null);}},[state.ch
 
  return <section ref={sceneRef} className="iso-garage"><div className="scene-toolbar"><div className="floor-dropdown"><Select value={String(focus||'all')} onValueChange={value=>{setFocus(value==='all'?null:Number(value));setInspected(null);}}><SelectTrigger aria-label="Select floor"><Layers size={13}/><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All floors</SelectItem>{[6,5,4,3,2,1].map(f=><SelectItem key={f} value={String(f)}>Floor {f}</SelectItem>)}</SelectContent></Select></div></div><div ref={stageRef} className={`isometric-stage ${focus?'floor-focus':''}`}>
  <svg className="garage-svg" style={{transformOrigin:'0 0'}} viewBox={viewBox} role="group" aria-label="Isometric donut-shaped garage with six floors, parked vehicles, and a shared central shaft"><defs><radialGradient id="garage-ambient"><stop offset="0" stopColor="#526477" stopOpacity=".14"/><stop offset="1" stopColor="#0a0d12" stopOpacity="0"/></radialGradient></defs><ellipse cx="300" cy="430" rx="250" ry="115" fill="url(#garage-ambient)"/>
- {!focus&&<g opacity=".15" stroke="#73808c" strokeWidth=".6">{[-120,-80,-40,0,40,80,120].map(v=><g key={v}><line x1={project(v,-5,-120)[0]} y1={project(v,-5,-120)[1]} x2={project(v,-5,120)[0]} y2={project(v,-5,120)[1]}/><line x1={project(-120,-5,v)[0]} y1={project(-120,-5,v)[1]} x2={project(120,-5,v)[0]} y2={project(120,-5,v)[1]}/></g>)}</g>}
+ {!focus&&<g opacity=".15" stroke="#485569" strokeWidth=".6">{[-120,-80,-40,0,40,80,120].map(v=><g key={v}><line x1={project(v,-5,-120)[0]} y1={project(v,-5,-120)[1]} x2={project(v,-5,120)[0]} y2={project(v,-5,120)[1]}/><line x1={project(-120,-5,v)[0]} y1={project(-120,-5,v)[1]} x2={project(120,-5,v)[0]} y2={project(120,-5,v)[1]}/></g>)}</g>}
  {!focus&&[1,2,3,4,5,6].map(f=><g key={f}><Floor floor={f} state={{...state,choice:inspected||state.choice}} focused={false} choosing={false} send={send} onInspect={inspect}/></g>)}
  {focus&&<Floor floor={focus} state={{...state,choice:inspected||state.choice}} focused choosing={state.choosing} send={send} onInspect={inspect}/>}
  {!focus&&<><line x1={project(0,165,0)[0]} y1={project(0,165,0)[1]} x2={project(0,-2,0)[0]} y2={project(0,-2,0)[1]} stroke="#8995a5" strokeWidth="1" strokeDasharray="3 7" opacity=".5"/>{flightPath}{vehicle}{active?.id==='C-204'&&<Vehicle x={0} y={83} z={0} angle={0} active/>}</>}
