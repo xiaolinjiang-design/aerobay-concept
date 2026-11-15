@@ -1,9 +1,10 @@
-import React,{useEffect,useState,useRef} from 'react';
+import React,{useEffect,useLayoutEffect,useState,useRef} from 'react';
 import {ChevronDown,Layers,ZoomIn,Zap,ArrowDown,ArrowUp} from 'lucide-react';
 import {Select,SelectTrigger,SelectValue,SelectContent,SelectItem} from './ui/select';
 import {Button} from './ui/button';
 import {Popover,PopoverAnchor,PopoverContent,PopoverClose} from './ui/popover';
 import {X,Check} from 'lucide-react';
+import {motionEnabled} from './motion-presence';
 import {spaceStatus,parkedVehicle,parkingTime} from '../lib/parking';
 const R=82,INNER=31,ANGLES=[-135,-75,-15,45,105,165];
 const location=(floor,bay)=>{let a=ANGLES[bay-1]*Math.PI/180;return{x:57*Math.cos(a),z:57*Math.sin(a),y:(floor-1)*28};};
@@ -42,10 +43,31 @@ function Floor({floor,focused,state,choosing,send,onInspect}){
  {enabled&&hoveredBay===bay&&<g className="bay-hover-label" transform={`translate(${project(loc.x,y,loc.z)[0]},${project(loc.x,y+12,loc.z)[1]-18})`} aria-hidden="true"><path d="M-55,-12 H55 V9 H4 L0,13 L-4,9 H-55 Z"/><text textAnchor="middle" y="2">{status==='available'?'Available':'Occupied'} · F{floor}-{String(bay).padStart(2,'0')}</text></g>}
  </g>;
  }).filter(Boolean).sort((a,b)=>{const la=location(floor,+a.key),lb=location(floor,+b.key);return la.x+la.z-lb.x-lb.z;});
- return <g>{parts}<polyline points={route.join(' ')} fill="none" stroke="#b7c0c9" strokeWidth=".6" strokeOpacity=".5" strokeDasharray="4 6"/>{spots}</g>;
+ return <g data-floor-layer={floor}>{parts}<polyline points={route.join(' ')} fill="none" stroke="#b7c0c9" strokeWidth=".6" strokeOpacity=".5" strokeDasharray="4 6"/>{spots}</g>;
 }
 export default function GarageScene({state,send,progress}){
- const[focus,setFocus]=useState(null),[inspected,setInspected]=useState(null),[assignCar,setAssignCar]=useState('');const anchorRef=useRef(null),lastTrigger=useRef(null),sceneRef=useRef(null);
+ const[focus,updateFocus]=useState(null),[inspected,setInspected]=useState(null),[assignCar,setAssignCar]=useState('');const anchorRef=useRef(null),lastTrigger=useRef(null),sceneRef=useRef(null);
+ const zoomRef=useRef(null),zoomAnimation=useRef(null);
+ function setFocus(next){
+  if(next===focus)return;
+  const svg=sceneRef.current?.querySelector('.garage-svg');
+  zoomAnimation.current?.cancel();
+  if(svg&&motionEnabled()){
+   const target=svg.querySelector(`[data-floor-layer="${next||focus}"]`);
+   zoomRef.current={bounds:target?.getBoundingClientRect(),next};
+  }else zoomRef.current=null;
+  updateFocus(next);
+ }
+ useLayoutEffect(()=>{
+  const snapshot=zoomRef.current,svg=sceneRef.current?.querySelector('.garage-svg');
+  if(!snapshot||!svg)return;
+  zoomRef.current=null;
+  const layer=svg.querySelector(`[data-floor-layer="${focus||snapshot.next}"]`),after=layer?.getBoundingClientRect(),before=snapshot.bounds,root=svg.getBoundingClientRect();
+  if(!before||!after||!after.width)return;
+  const scale=before.width/after.width,dx=before.x-root.x-(after.x-root.x)*scale,dy=before.y-root.y-(after.y-root.y)*scale;
+  zoomAnimation.current=svg.animate([{transform:`translate(${dx}px,${dy}px) scale(${scale})`,opacity:.5},{transform:'translate(0,0) scale(1)',opacity:1}],{duration:260,easing:'cubic-bezier(.645,.045,.355,1)'});
+  return()=>zoomAnimation.current?.cancel();
+ },[focus]);
  const [dragOffset,setDragOffset]=useState({x:0,y:0});const dragRef=useRef(null);
  useEffect(()=>{setDragOffset({x:0,y:0});dragRef.current=null;},[inspected?.floor,inspected?.bay]);
  function startDrag(e){if(e.button!==0||e.target.closest('button'))return;const rect=e.currentTarget.closest('[data-slot=popover-content]').getBoundingClientRect();dragRef.current={pointer:e.pointerId,x:e.clientX,y:e.clientY,rect,offset:dragOffset};e.currentTarget.setPointerCapture(e.pointerId);e.preventDefault();}
@@ -54,7 +76,7 @@ export default function GarageScene({state,send,progress}){
  const arrivals=state.requests.filter(r=>r.type==='arrival'&&r.status==='new');
  const selectedArrival=arrivals.find(r=>r.id===assignCar)||arrivals.find(r=>r.id===state.selected)||arrivals[0];
  function bayAnchor(spot){return {contextElement:sceneRef.current,getBoundingClientRect:()=>{const bay=sceneRef.current?.querySelector(`[data-spot="${spot.floor}-${spot.bay}"] .bay-footprint`);const rect=bay?.getBoundingClientRect();if(rect)return rect;return sceneRef.current?.getBoundingClientRect()||new DOMRect();}};}
- function inspect(spot,element){lastTrigger.current=element;anchorRef.current=bayAnchor(spot);setInspected(spot);setAssignCar(state.selected);}
+ function inspect(spot,element){setFocus(spot.floor);lastTrigger.current=element;anchorRef.current=bayAnchor(spot);setInspected(spot);setAssignCar(state.selected);}
 useEffect(()=>{if(state.choosing){setFocus(null);setInspected(null);}},[state.choosing,state.selected]);useEffect(()=>{if(state.choice){setFocus(state.choice.floor);if(!inspected||inspected.floor!==state.choice.floor||inspected.bay!==state.choice.bay){anchorRef.current=bayAnchor(state.choice);setInspected(state.choice);setAssignCar(state.selected);}}},[state.choice]);
  useEffect(()=>{if(inspected&&spaceStatus(state,inspected.floor,inspected.bay)==='reserved')setInspected(null);},[state.requests,state.overrides]);useEffect(()=>{if(state.active&&state.active.id!=='C-204')setFocus(null);},[state.active?.id]);
  const occupied=inspected&&spaceStatus(state,inspected.floor,inspected.bay)==='occupied';
@@ -63,7 +85,7 @@ useEffect(()=>{if(state.choosing){setFocus(null);setInspected(null);}},[state.ch
  const active=state.active;let vehicle=null,flightPath=null;if(active&&active.id!=='C-204'&&active.phase!=='confirming'){let loc=location(active.floor,active.bay),t=active.phase==='transit'?progress/100:active.type==='departure'&&['reserved','gate-open','gate-closing','confirming'].includes(active.phase)?1:0;if(active.type==='departure')t=1-t;let portal=active.type==='arrival'?165:-18;let lateral=Math.max(0,(t-.72)/.28),y=portal+(loc.y-portal)*Math.min(t/.72,1);vehicle=<Vehicle x={loc.x*lateral} y={y+2} z={loc.z*lateral} angle={ANGLES[active.bay-1]+90} active/>;flightPath=<polyline points={pathPoints([[0,portal,0],[0,loc.y,0],[loc.x,loc.y,loc.z]])} fill="none" stroke="#9b9de0" strokeWidth="2" strokeDasharray="4 5"/>;}
  const viewBox=focus?`70 ${215-(focus-1)*43.4} 460 260`:'50 55 500 515';
  return <section ref={sceneRef} className="iso-garage"><div className="scene-toolbar"><div className="floor-dropdown"><Select value={String(focus||'all')} onValueChange={value=>{setFocus(value==='all'?null:Number(value));setInspected(null);}}><SelectTrigger aria-label="Select floor"><Layers size={13}/><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">All floors</SelectItem>{[6,5,4,3,2,1].map(f=><SelectItem key={f} value={String(f)}>Floor {f}</SelectItem>)}</SelectContent></Select></div></div><div className={`isometric-stage ${focus?'floor-focus':''}`}>
- <svg className="garage-svg" viewBox={viewBox} role="group" aria-label="Isometric donut-shaped garage with six floors, parked vehicles, and a shared central shaft"><defs><radialGradient id="garage-ambient"><stop offset="0" stopColor="#526477" stopOpacity=".14"/><stop offset="1" stopColor="#0a0d12" stopOpacity="0"/></radialGradient></defs><ellipse cx="300" cy="430" rx="250" ry="115" fill="url(#garage-ambient)"/>
+ <svg className="garage-svg" style={{transformOrigin:'0 0'}} viewBox={viewBox} role="group" aria-label="Isometric donut-shaped garage with six floors, parked vehicles, and a shared central shaft"><defs><radialGradient id="garage-ambient"><stop offset="0" stopColor="#526477" stopOpacity=".14"/><stop offset="1" stopColor="#0a0d12" stopOpacity="0"/></radialGradient></defs><ellipse cx="300" cy="430" rx="250" ry="115" fill="url(#garage-ambient)"/>
  {!focus&&<g opacity=".15" stroke="#73808c" strokeWidth=".6">{[-120,-80,-40,0,40,80,120].map(v=><g key={v}><line x1={project(v,-5,-120)[0]} y1={project(v,-5,-120)[1]} x2={project(v,-5,120)[0]} y2={project(v,-5,120)[1]}/><line x1={project(-120,-5,v)[0]} y1={project(-120,-5,v)[1]} x2={project(120,-5,v)[0]} y2={project(120,-5,v)[1]}/></g>)}</g>}
  {!focus&&[1,2,3,4,5,6].map(f=><g key={f}><Floor floor={f} state={{...state,choice:inspected||state.choice}} focused={false} choosing={false} send={send} onInspect={inspect}/></g>)}
  {focus&&<Floor floor={focus} state={{...state,choice:inspected||state.choice}} focused choosing={state.choosing} send={send} onInspect={inspect}/>}
