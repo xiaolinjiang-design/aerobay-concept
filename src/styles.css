@@ -192,3 +192,5 @@ html[data-input=keyboard] #halo-linear-app .spot-assignment,html[data-input=keyb
  #halo-linear-app .overview-row .movement-timeline{left:492px}
 }
 @media(max-width:999px){#halo-linear-app .overview-row .occupancy-overview{display:flex;flex-direction:column;align-items:stretch;min-width:200px;gap:10px}}
+
+#halo-linear-app .timeline-car.shaft-free{color:#72d4a4}
