@@ -80,7 +80,7 @@ export default function GarageScene({state,send,progress}){
  const selectedArrival=arrivals.find(r=>r.id===assignCar)||arrivals.find(r=>r.id===state.selected)||arrivals[0];
  function bayAnchor(spot){return {contextElement:sceneRef.current,getBoundingClientRect:()=>{const bay=sceneRef.current?.querySelector(`[data-spot="${spot.floor}-${spot.bay}"] .bay-footprint`);const rect=bay?.getBoundingClientRect();if(rect)return rect;return sceneRef.current?.getBoundingClientRect()||new DOMRect();}};}
  function inspect(spot,element){setFocus(spot.floor);lastTrigger.current=element;anchorRef.current=bayAnchor(spot);setInspected(spot);setAssignCar(state.selected);}
-useEffect(()=>{if(state.choosing){setFocus(null);setInspected(null);}},[state.choosing,state.selected]);useEffect(()=>{if(state.choice){setFocus(state.choice.floor);if(!inspected||inspected.floor!==state.choice.floor||inspected.bay!==state.choice.bay){anchorRef.current=bayAnchor(state.choice);setInspected(state.choice);setAssignCar(state.selected);}}},[state.choice]);
+useEffect(()=>{if(state.choosing){setFocus(null);setInspected(null);}},[state.choosing,state.selected]);useEffect(()=>{if(state.choice){setFocus(state.choice.floor);setInspected(null);}},[state.choice]);
  useEffect(()=>{if(inspected&&spaceStatus(state,inspected.floor,inspected.bay)==='reserved')setInspected(null);},[state.requests,state.overrides]);useEffect(()=>{if(state.active&&state.active.id!=='C-204')setFocus(null);},[state.active?.id]);
  useEffect(()=>{if(!state.choosing&&state.queue.length){setFocus(null);setInspected(null);}},[state.choosing,state.queue.length]);
  const occupied=inspected&&spaceStatus(state,inspected.floor,inspected.bay)==='occupied';
