@@ -4,18 +4,18 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import '../concept.css';
 
-export function mountGarage(root,{mode='demo',initialState=null}={}){
+export function mountGarage(root,{mode='demo',initialState=null,onSpotClick}={}){
 root.innerHTML=`<main class="concept"><div id="viewport" aria-label="Interactive 3D parking garage"></div><div class="floor-control" aria-label="View level"><button class="active" data-level="all">ALL</button>${[6,5,4,3,2,1].map(n=>`<button data-level="${n}">${String(n).padStart(2,'0')}</button>`).join('')}</div><div class="controls"><button class="roof-toggle" aria-pressed="false">HIDE ROOF</button><div class="gate-control"><div class="gate-heading">SHAFT <span class="shaft-status">EMPTY</span></div><div class="gate-row"><button data-action="admit">AUTHORIZE ENTRY ↓</button><button data-action="release">AUTHORIZE EXIT ↓</button></div><p class="gate-message" role="status">Gates closed · shaft clear</p></div></div></main>`;
 if(mode==='app')root.querySelector('.gate-control').hidden=true;
 const viewport=root.querySelector('#viewport');
 const scene=new THREE.Scene();scene.background=new THREE.Color('#e9edf0');scene.fog=new THREE.Fog('#e9edf0',45,100);
 const camera=new THREE.PerspectiveCamera(36,1,.1,200);camera.position.set(25,22,29);
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;viewport.append(renderer.domElement);
-const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,5,0);controls.enableDamping=true;controls.dampingFactor=.055;controls.minDistance=19;controls.maxDistance=95;controls.maxPolarAngle=Math.PI*.49;
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,5,0);controls.enableDamping=true;controls.dampingFactor=.055;controls.minDistance=mode==='app'?5:19;controls.maxDistance=95;controls.maxPolarAngle=Math.PI*.49;
 scene.add(new THREE.HemisphereLight('#ffffff','#aebbc7',2.4));const sun=new THREE.DirectionalLight('#ffffff',3.3);sun.position.set(-12,28,14);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-30;sun.shadow.camera.right=30;sun.shadow.camera.top=30;sun.shadow.camera.bottom=-30;sun.shadow.bias=-.0002;scene.add(sun);
 const mat=(color,roughness=.82,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
 const white=mat('#f9faf9'),edge=mat('#d7dfe3'),inside=mat('#e7ecef'),stripe=mat('#ffffff'),steel=mat('#b7c5ca',.45,.35),dark=mat('#5b6d76',.4,.2),teal=mat('#8db8b7',.5,.2),amber=mat('#e6c684');
-const garage=new THREE.Group();scene.add(garage);const levels=[];
+const garage=new THREE.Group();scene.add(garage);const levels=[],bayTargets=[],bayMarkers=[];
 function mesh(geometry,material,parent=garage){const o=new THREE.Mesh(geometry,material);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
 function box(w,h,d,x,y,z,material,parent=garage){const o=mesh(new THREE.BoxGeometry(w,h,d),material,parent);o.position.set(x,y,z);return o}
 function torus(radius,tube,y,material,parent=garage){const o=mesh(new THREE.TorusGeometry(radius,tube,8,128),material,parent);o.rotation.x=Math.PI/2;o.position.y=y;return o}
@@ -88,6 +88,11 @@ for(let level=0;level<6;level++){const group=new THREE.Group();garage.add(group)
  torus(12.78,.055,wallTop,steel,group);
  for(let i=0;i<24;i++){const a=i*Math.PI/12;box(.09,wallHeight,.09,12.78*Math.cos(a),(wallBottom+wallTop)/2,12.78*Math.sin(a),steel,group)}
  }
+if(mode==='app')for(let floor=1;floor<=6;floor++)for(let bay=1;bay<=6;bay++){
+ const angle=(bay-1)*Math.PI/3+Math.PI/12,x=10.1*Math.cos(angle),z=10.1*Math.sin(angle),y=(floor-1)*2.35+.43;
+ const marker=mesh(new THREE.RingGeometry(1.44,1.53,48),new THREE.MeshBasicMaterial({color:'#72d4a4',side:THREE.DoubleSide,transparent:true,opacity:.85,depthWrite:false}),levels[floor-1]);marker.rotation.x=-Math.PI/2;marker.position.set(x,y+.015,z);marker.castShadow=false;marker.visible=false;marker.userData={floor,bay};bayMarkers.push(marker);
+ const target=mesh(new THREE.CircleGeometry(1.65,48),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}),levels[floor-1]);target.rotation.x=-Math.PI/2;target.position.set(x,y+.02,z);target.castShadow=false;target.userData={floor,bay};bayTargets.push(target);
+}
 // An opaque, high-albedo roof shades the decks; the central hatch seals the flight shaft.
 const roof=new THREE.Group();garage.add(roof);
 const roofMaterial=mat('#f8faf7',.88);roofMaterial.side=THREE.DoubleSide;
@@ -148,12 +153,34 @@ function setPhase(phase,note){gateState.phase=phase;phaseStart=performance.now()
 admitButton.addEventListener('click',()=>{if(admitButton.disabled)return;flying.position.y=17;setPhase('entryOpening','Top gate opening')});
 releaseButton.addEventListener('click',()=>{if(releaseButton.disabled)return;flying.position.y=7;setPhase('exitOpening','Bottom gate opening')});setPhase('empty');
 const hiddenMatrix=new THREE.Matrix4().makeScale(0,0,0);
+let cameraGoal=null,targetGoal=null,lastFocusKey=null,wasChoosing=false;
+function focusSpot({floor,bay}){
+ if(!Number.isInteger(floor)||!Number.isInteger(bay)||floor<1||floor>6||bay<1||bay>6)return;
+ const angle=(bay-1)*Math.PI/3+Math.PI/12,x=10.1*Math.cos(angle),z=10.1*Math.sin(angle),y=(floor-1)*2.35+.8;
+ selected=String(floor);root.querySelectorAll('[data-level]').forEach(button=>button.classList.toggle('active',button.dataset.level===selected));levels.forEach((group,index)=>group.visible=index===floor-1);
+ roof.visible=false;roofToggle.setAttribute('aria-pressed','true');roofToggle.textContent='SHOW ROOF';
+ targetGoal=new THREE.Vector3(x,y,z);cameraGoal=new THREE.Vector3(x-5.5*Math.cos(angle)-5*Math.sin(angle),y+8.5,z-5.5*Math.sin(angle)+5*Math.cos(angle));
+ flying.visible=false;flightGlow.visible=false;
+}
+const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let pointerStart=null;
+function onPointerDown(event){pointerStart={x:event.clientX,y:event.clientY};cameraGoal=null;targetGoal=null}
+function onPointerUp(event){if(mode!=='app'||!pointerStart)return;const movement=Math.hypot(event.clientX-pointerStart.x,event.clientY-pointerStart.y);pointerStart=null;if(movement>7)return;
+ const rect=renderer.domElement.getBoundingClientRect();pointer.set((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);
+ const hit=raycaster.intersectObjects(bayTargets).find(({object})=>object.parent.visible);if(!hit)return;const spot=hit.object.userData;focusSpot(spot);
+ if(currentState?.choosing&&currentState.availableBays?.some(item=>item.floor===spot.floor&&item.bay===spot.bay))onSpotClick?.(spot);
+}
+renderer.domElement.addEventListener('pointerdown',onPointerDown);renderer.domElement.addEventListener('pointerup',onPointerUp);
 function update(next){currentState=next;if(mode!=='app'||!next)return;
  const occupied=new Set((next.occupiedBays||[]).map(({floor,bay})=>`${floor}-${bay}`));
  instanceRows.forEach(rows=>rows.forEach(({instances,cars,matrices})=>{cars.forEach((item,index)=>instances.setMatrixAt(index,occupied.has(`${item.level+1}-${item.bay}`)?matrices[index]:hiddenMatrix));instances.instanceMatrix.needsUpdate=true}));
  const active=next.active;gateState.top=!!active&&active.type==='arrival'&&active.phase==='gate-open';gateState.bottom=!!active&&active.type==='departure'&&active.phase==='gate-open';gateState.phase=active?'inside':'empty';
  flying.visible=selected==='all'&&!!active;flightGlow.visible=flying.visible;
  if(active){const amount=Math.min(1,Math.max(0,(next.progress||0)/100));flying.position.y=active.type==='arrival'?17-10*amount:7-11*amount}
+ const available=new Set((next.availableBays||[]).map(spot=>`${spot.floor}-${spot.bay}`));
+ bayMarkers.forEach(marker=>{const spot=marker.userData,isChoice=next.choice?.floor===spot.floor&&next.choice?.bay===spot.bay;marker.visible=next.choosing&&available.has(`${spot.floor}-${spot.bay}`);marker.material.color.set(isChoice?'#ffe1a2':'#72d4a4');marker.scale.setScalar(isChoice?1.16:1)});
+ const spot=next.choice||(next.choosing&&!wasChoosing?next.suggestedBays?.[0]:null);const focusKey=spot?`${spot.floor}-${spot.bay}`:null;
+ if(spot&&focusKey!==lastFocusKey){focusSpot(spot);lastFocusKey=focusKey}
+ if(!next.choosing)lastFocusKey=null;wasChoosing=next.choosing;
 }
 if(initialState)update(initialState);
 const clock=new THREE.Clock();let frame;function animate(){if(disposed)return;frame=requestAnimationFrame(animate);const t=clock.getElapsedTime(),elapsed=performance.now()-phaseStart;
@@ -164,6 +191,6 @@ const clock=new THREE.Clock();let frame;function animate(){if(disposed)return;fr
  else if(mode==='demo'&&gateState.phase==='exiting'){flying.position.y=7-Math.min(elapsed/2200,1)*11;if(elapsed>=2200)setPhase('exitClosing','Bottom gate closing')}
  else if(mode==='demo'&&gateState.phase==='exitClosing'&&elapsed>=800)setPhase('empty');
  else if(mode==='demo'&&gateState.phase==='inside')flying.position.y=7+.16*Math.sin(t*.9);
- if(mode==='demo')flying.rotation.y=t*.17;[[topPanels,gateState.top],[bottomPanels,gateState.bottom]].forEach(([panels,open])=>panels.forEach((panel,i)=>{const target=open?(i===0?-3.5:3.5):0;panel.position.x+=(target-panel.position.x)*.1}));controls.update();renderer.render(scene,camera)}animate();
-return{update,dispose(){disposed=true;cancelAnimationFrame(frame);resizeObserver.disconnect();controls.dispose();scene.traverse(object=>{if(object.isMesh){object.geometry.dispose();if(Array.isArray(object.material))object.material.forEach(m=>m.dispose());else object.material.dispose()}});renderer.dispose();root.replaceChildren()}};
+ if(mode==='demo')flying.rotation.y=t*.17;[[topPanels,gateState.top],[bottomPanels,gateState.bottom]].forEach(([panels,open])=>panels.forEach((panel,i)=>{const target=open?(i===0?-3.5:3.5):0;panel.position.x+=(target-panel.position.x)*.1}));if(cameraGoal){camera.position.lerp(cameraGoal,.11);controls.target.lerp(targetGoal,.11);if(camera.position.distanceTo(cameraGoal)<.03){camera.position.copy(cameraGoal);controls.target.copy(targetGoal);cameraGoal=null;targetGoal=null}}controls.update();renderer.render(scene,camera)}animate();
+return{update,dispose(){disposed=true;cancelAnimationFrame(frame);resizeObserver.disconnect();renderer.domElement.removeEventListener('pointerdown',onPointerDown);renderer.domElement.removeEventListener('pointerup',onPointerUp);controls.dispose();scene.traverse(object=>{if(object.isMesh){object.geometry.dispose();if(Array.isArray(object.material))object.material.forEach(m=>m.dispose());else object.material.dispose()}});renderer.dispose();root.replaceChildren()}};
 }
