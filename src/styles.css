@@ -194,3 +194,6 @@ html[data-input=keyboard] #halo-linear-app .spot-assignment,html[data-input=keyb
 @media(max-width:999px){#halo-linear-app .overview-row .occupancy-overview{display:flex;flex-direction:column;align-items:stretch;min-width:200px;gap:10px}}
 
 #halo-linear-app .timeline-car.shaft-free{color:#72d4a4}
+
+#halo-linear-app .request-filters{flex-wrap:nowrap;gap:4px}
+#halo-linear-app .request-filter-pill{padding-inline:6px;gap:4px;white-space:nowrap;flex:0 0 auto}
