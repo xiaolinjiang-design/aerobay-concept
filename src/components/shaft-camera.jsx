@@ -1,0 +1,12 @@
+import React from 'react';
+import {Video,LockKeyhole,UnlockKeyhole} from 'lucide-react';
+export default function ShaftCamera({movement,progress}){
+ const phase=movement?.phase;
+ const open=!!movement&&['gate-open','transit'].includes(phase);
+ const changing=phase==='reserved'||phase==='gate-closing';
+ const gate=changing?(phase==='reserved'?'Opening':'Closing'):open?'Open':'Closed';
+ const visible=movement&&['gate-open','transit','gate-closing'].includes(phase);
+ const t=phase==='transit'?progress/100:phase==='gate-open'?0:1;
+ const y=movement?.type==='arrival'?38+t*45:83-t*45;
+ return <section className="shaft-camera" aria-label="Shaft camera preview"><div className="camera-heading"><span><Video size={12}/>Shaft camera</span><span className="camera-preview-tag">Preview</span></div><div className={`camera-feed ${open?'gate-is-open':''} ${changing?'gate-is-changing':''}`}><svg viewBox="0 0 240 132" role="img" aria-label={`Illustrated shaft camera, gate ${gate.toLowerCase()}${movement?', vehicle '+movement.id:''}`}><defs><linearGradient id="camera-well" x2="0" y2="1"><stop stopColor="#222c35"/><stop offset="1" stopColor="#0b1015"/></linearGradient></defs><path d="M0 0H240V132H0Z" fill="#11181e"/><path d="M29 0L69 30V109L20 132H220L171 109V30L211 0Z" fill="url(#camera-well)"/><path d="M69 30H171V109H69Z" fill="#090e12" stroke="#47535e"/><g fill="none" stroke="#52616c" strokeWidth=".7" opacity=".55"><path d="M29 0L69 30M211 0L171 30M0 80L69 65M240 80L171 65M20 132L69 109M220 132L171 109M69 30H171M69 50H171M69 70H171M69 90H171M69 109H171"/></g><path d="M102 132L111 109M138 132L129 109" stroke="#82919c" strokeDasharray="3 4" fill="none" opacity=".5"/>{visible&&<g transform={`translate(120 ${y})`}><ellipse cy="13" rx="21" ry="4" fill="#000" opacity=".5"/><path d="M-17-7L-11-13H11L17-7V10H-17Z" fill="#a8b5c0" stroke="#d0d9df" strokeWidth=".6"/><path d="M-9-10H9L12-1H-12Z" fill="#3b505e"/><path d="M-15 3H-9M9 3H15" stroke="#ecf0e6" strokeWidth="2"/></g>}<g className="camera-gate" fill="#34424d" stroke="#61717c" strokeWidth=".5"><path d="M70 31H119V108H70Z"/><path d="M121 31H170V108H121Z"/><path d="M74 44H115M74 57H115M74 70H115M74 83H115M125 44H166M125 57H166M125 70H166M125 83H166"/></g><path d="M8 18V8H18M222 8H232V18M8 114V124H18M222 124H232V114" fill="none" stroke="#a4adb5" opacity=".6"/></svg></div><div className="camera-caption"><span>{open?<UnlockKeyhole size={11}/>:<LockKeyhole size={11}/>}Gate {gate.toLowerCase()}</span><span>CAM 01</span></div></section>;
+}
