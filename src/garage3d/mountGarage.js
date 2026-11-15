@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import '../concept.css';
+import {vehiclePose,gateOpening} from './vehicle-motion.js';
 
 export function mountGarage(root,{mode='demo',initialState=null,onSpotClick}={}){
 root.innerHTML=`<main class="concept"><div id="viewport" aria-label="Interactive 3D parking garage"></div><div class="floor-control" aria-label="View level"><button class="active" data-level="all">ALL</button>${[6,5,4,3,2,1].map(n=>`<button data-level="${n}">${String(n).padStart(2,'0')}</button>`).join('')}</div><div class="controls"><div class="gate-control"><div class="gate-heading">SHAFT <span class="shaft-status">EMPTY</span></div><div class="gate-row"><button data-action="admit">AUTHORIZE ENTRY ↓</button><button data-action="release">AUTHORIZE EXIT ↓</button></div><p class="gate-message" role="status">Gates closed · shaft clear</p></div></div></main>`;
@@ -79,12 +80,10 @@ function car(parent,x,y,z,angle,color=white,styleIndex=0){
  }
  return g;
 }
-const perimeterMesh=new THREE.MeshPhysicalMaterial({color:'#293440',roughness:.8,metalness:.15,side:THREE.DoubleSide});
 for(let level=0;level<6;level++){const group=new THREE.Group();garage.add(group);levels.push(group);const y=level*2.35;const slab=mesh(floorGeometry,white,group);slab.position.y=y;torus(12.68,.13,y+.38,edge,group);torus(4.18,.11,y+.39,steel,group);
  for(let i=0;i<12;i++){const a=i*Math.PI/6;for(const r of [6.55,11.75]){const x=r*Math.cos(a),z=r*Math.sin(a);line([x,z],[x+.01*Math.cos(a),z+.01*Math.sin(a)],y+.4,.035,edge,group)}const p1=[7.65*Math.cos(a),7.65*Math.sin(a)],p2=[12.25*Math.cos(a),12.25*Math.sin(a)];line(p1,p2,y+.405,.035,stripe,group);const mid=a+Math.PI/12;const tx=10.1*Math.cos(mid),tz=10.1*Math.sin(mid);const tick=mesh(new THREE.RingGeometry(.52,.57,40),teal,group);tick.rotation.x=-Math.PI/2;tick.position.set(tx,y+.41,tz);if(mode==='app'?i%2===0:(i+level)%6!==0){car(group,tx,y+.42,tz,-mid-Math.PI/2,carPaint[(i+level*3)%carPaint.length],(i+level*2)%carStyles.length);if(mode==='app')parkedCars.at(-1).bay=i/2+1}}
  for(let i=0;i<24;i++){const a=i*Math.PI/12;const innerR=4.3,outerR=12.65;const xi=innerR*Math.cos(a),zi=innerR*Math.sin(a),xo=outerR*Math.cos(a),zo=outerR*Math.sin(a);if(i%2===0){box(.17,1.25,.17,xo,y+1.01,zo,white,group);box(.13,.65,.13,xi,y+.75,zi,white,group)}const b=a+Math.PI/12;line([xo,zo],[outerR*Math.cos(b),outerR*Math.sin(b)],y+1.52,.055,white,group);line([xi,zi],[innerR*Math.cos(b),innerR*Math.sin(b)],y+1.08,.045,white,group)}
  const wallBottom=y+.38,wallTop=level===5?15.05:y+2.35,wallHeight=wallTop-wallBottom;
- const wall=mesh(new THREE.CylinderGeometry(12.78,12.78,wallHeight,96,1,true),perimeterMesh,group);wall.position.y=(wallBottom+wallTop)/2;wall.castShadow=false;
  torus(12.78,.055,wallTop,steel,group);
  for(let i=0;i<24;i++){const a=i*Math.PI/12;box(.09,wallHeight,.09,12.78*Math.cos(a),(wallBottom+wallTop)/2,12.78*Math.sin(a),steel,group)}
  }
@@ -145,7 +144,7 @@ new GLTFLoader().load(`${import.meta.env.BASE_URL}supercar.glb`,({scene:model})=
   cars.forEach(({group})=>{levels[level].remove(group);group.traverse(object=>{if(object.isMesh)object.geometry.dispose()})});
  }
  flying.clear();for(const {material,geometry} of parts){const displayMaterial=material.clone();if(material.name==='paint'){displayMaterial.map=null;displayMaterial.color.set('#8294b1')}const piece=new THREE.Mesh(geometry,displayMaterial);piece.castShadow=true;piece.receiveShadow=true;flying.add(piece)}
- if(currentState)update(currentState);
+ if(currentState){setRouteCutaway(currentState.route);update(currentState);}
 },undefined,error=>console.error('Car model failed to load',error));
 let initialSize=true;function resize(){const w=viewport.clientWidth,h=viewport.clientHeight;if(!w||!h)return;camera.aspect=w/h;if(initialSize){const scale=Math.max(1,1.05/camera.aspect)*(mode==='app'?1.28:1);camera.position.set(25*scale,5+17*scale,29*scale);initialSize=false}camera.updateProjectionMatrix();renderer.setSize(w,h)}const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(viewport);resize();
 let selected='all';root.querySelectorAll('[data-level]').forEach(button=>button.addEventListener('click',()=>{selected=button.dataset.level;root.querySelectorAll('[data-level]').forEach(b=>b.classList.toggle('active',b===button));levels.forEach((g,i)=>{g.visible=selected==='all'||i+1===Number(selected)});flightGlow.visible=selected==='all';flying.visible=selected==='all'&&gateState.phase!=='empty'}));
@@ -155,6 +154,7 @@ admitButton.addEventListener('click',()=>{if(admitButton.disabled)return;flying.
 releaseButton.addEventListener('click',()=>{if(releaseButton.disabled)return;flying.position.y=7;setPhase('exitOpening','Bottom gate opening')});setPhase('empty');
 const hiddenMatrix=new THREE.Matrix4().makeScale(0,0,0);
 let cameraGoal=null,targetGoal=null,lastFocusKey=null,wasChoosing=false,lastRouteKey=null;
+let activePhaseKey=null,activePhaseStart=performance.now();
 const routeGroup=new THREE.Group();garage.add(routeGroup);
 const cutawayMaterials=[];
 function setRouteCutaway(route){
@@ -188,8 +188,8 @@ function showRoute(route){
  if(!route)return;
  const angle=(route.bay-1)*Math.PI/3+Math.PI/12,y=(route.floor-1)*2.35+.65;
  const bay=new THREE.Vector3(10.1*Math.cos(angle),y,10.1*Math.sin(angle)),inner=new THREE.Vector3(3*Math.cos(angle),y,3*Math.sin(angle)),center=new THREE.Vector3(0,y,0),portal=new THREE.Vector3(0,route.type==='arrival'?17:-.2,0);
- const points=route.type==='arrival'?[portal,new THREE.Vector3(0,y+1,0),center,inner,bay]:[bay,inner,center,new THREE.Vector3(0,y-1,0),portal];
- const curve=new THREE.CatmullRomCurve3(points,false,'centripetal');
+ const points=route.type==='arrival'?[portal,center,inner,bay]:[bay,inner,center,portal];
+ const curve=new THREE.CurvePath();points.slice(1).forEach((point,index)=>curve.add(new THREE.LineCurve3(points[index],point)));
  for(const [radius,opacity,color] of [[.065,.1,'#c5d0df'],[.025,.9,'#dce5ee']]){const trail=mesh(new THREE.TubeGeometry(curve,100,radius,8,false),new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthTest:true,depthWrite:false}),routeGroup);trail.renderOrder=0;trail.castShadow=false;}
  const end=mesh(new THREE.SphereGeometry(.12,16,12),new THREE.MeshBasicMaterial({color:'#dce5ee',depthTest:true}),routeGroup);end.position.copy(points.at(-1));end.renderOrder=0;end.castShadow=false;
 }
@@ -212,12 +212,16 @@ function onPointerUp(event){if(mode!=='app'||!pointerStart)return;const movement
 renderer.domElement.addEventListener('pointerdown',onPointerDown);renderer.domElement.addEventListener('pointerup',onPointerUp);
 function update(next){currentState=next;if(mode!=='app'||!next)return;
  const occupied=new Set((next.occupiedBays||[]).map(({floor,bay})=>`${floor}-${bay}`));
+ if(next.active)occupied.delete(`${next.active.floor}-${next.active.bay}`);
+ parkedCars.forEach(item=>{item.group.visible=occupied.has(`${item.level+1}-${item.bay}`)});
  instanceRows.forEach(rows=>rows.forEach(({instances,cars,matrices})=>{cars.forEach((item,index)=>instances.setMatrixAt(index,occupied.has(`${item.level+1}-${item.bay}`)?matrices[index]:hiddenMatrix));instances.instanceMatrix.needsUpdate=true}));
  const active=next.active;gateState.top=!!active&&active.type==='arrival'&&active.phase==='gate-open';gateState.bottom=!!active&&active.type==='departure'&&active.phase==='gate-open';gateState.phase=active?'inside':'empty';
  flying.visible=selected==='all'&&!!active;flightGlow.visible=flying.visible;
- if(active){const amount=Math.min(1,Math.max(0,(next.progress||0)/100));flying.position.y=active.type==='arrival'?17-10*amount:7-11*amount}
+ const phaseKey=active?`${active.id}-${active.phase}`:null;
+ if(phaseKey!==activePhaseKey){activePhaseKey=phaseKey;activePhaseStart=performance.now();}
+ flightGlow.visible=false;
  const available=new Set((next.availableBays||[]).map(spot=>`${spot.floor}-${spot.bay}`));
- bayMarkers.forEach(marker=>{const spot=marker.userData,isChoice=next.choice?.floor===spot.floor&&next.choice?.bay===spot.bay;marker.visible=next.choosing&&available.has(`${spot.floor}-${spot.bay}`);marker.material.color.set(isChoice?'#ffe1a2':'#72d4a4');marker.scale.setScalar(isChoice?1.16:1)});
+ bayMarkers.forEach(marker=>{const spot=marker.userData,isChoice=next.choice?.floor===spot.floor&&next.choice?.bay===spot.bay;marker.visible=(next.choosing&&available.has(`${spot.floor}-${spot.bay}`))||!!(active&&active.floor===spot.floor&&active.bay===spot.bay);marker.material.color.set(isChoice?'#ffe1a2':'#72d4a4');marker.scale.setScalar(isChoice?1.16:1)});
  const pointerSpot=next.choice;
  assignmentPointer.visible=!!(next.choosing&&pointerSpot&&available.has(`${pointerSpot.floor}-${pointerSpot.bay}`));
  if(assignmentPointer.visible){const angle=(pointerSpot.bay-1)*Math.PI/3+Math.PI/12;assignmentPointer.userData.baseY=(pointerSpot.floor-1)*2.35+1.1;assignmentPointer.position.set(10.1*Math.cos(angle),assignmentPointer.userData.baseY,10.1*Math.sin(angle));}
@@ -231,6 +235,15 @@ function update(next){currentState=next;if(mode!=='app'||!next)return;
 if(initialState)update(initialState);
 const pointerReducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const clock=new THREE.Clock();let frame;function animate(){if(disposed)return;frame=requestAnimationFrame(animate);const t=clock.getElapsedTime(),elapsed=performance.now()-phaseStart;
+ if(mode==='app'&&currentState?.active){
+  const active=currentState.active,phaseElapsed=performance.now()-activePhaseStart;
+  const pose=vehiclePose(active,pointerReducedMotion.matches?0:phaseElapsed);
+  flying.position.set(pose.x,pose.y,pose.z);flying.rotation.y=pose.heading;
+  flying.visible=(selected==='all'||Number(selected)===active.floor)&&!(active.type==='departure'&&['gate-closing','confirming'].includes(active.phase));
+  root.dataset.vehiclePosition=`${pose.x.toFixed(2)},${pose.y.toFixed(2)},${pose.z.toFixed(2)}`;
+  const opening=gateOpening(active,pointerReducedMotion.matches?Infinity:phaseElapsed);
+  [[topPanels,active.type==='arrival'],[bottomPanels,active.type==='departure']].forEach(([panels,relevant])=>panels.forEach((panel,i)=>{panel.position.x=relevant?opening*(i===0?-3.5:3.5):0}));
+ }
  if(assignmentPointer.visible)assignmentPointer.position.y=assignmentPointer.userData.baseY+(pointerReducedMotion.matches||document.hidden?0:Math.sin(t*Math.PI*2/1.8)*.10);
  if(mode==='demo'&&gateState.phase==='entryOpening'&&elapsed>=800)setPhase('entering','One car entering');
  else if(mode==='demo'&&gateState.phase==='entering'){flying.position.y=17-Math.min(elapsed/2200,1)*10;if(elapsed>=2200)setPhase('entryClosing','Top gate closing')}
@@ -239,6 +252,6 @@ const clock=new THREE.Clock();let frame;function animate(){if(disposed)return;fr
  else if(mode==='demo'&&gateState.phase==='exiting'){flying.position.y=7-Math.min(elapsed/2200,1)*11;if(elapsed>=2200)setPhase('exitClosing','Bottom gate closing')}
  else if(mode==='demo'&&gateState.phase==='exitClosing'&&elapsed>=800)setPhase('empty');
  else if(mode==='demo'&&gateState.phase==='inside')flying.position.y=7+.16*Math.sin(t*.9);
- if(mode==='demo')flying.rotation.y=t*.17;[[topPanels,gateState.top],[bottomPanels,gateState.bottom]].forEach(([panels,open])=>panels.forEach((panel,i)=>{const target=open?(i===0?-3.5:3.5):0;panel.position.x+=(target-panel.position.x)*.1}));if(cameraGoal){camera.position.lerp(cameraGoal,.11);controls.target.lerp(targetGoal,.11);if(camera.position.distanceTo(cameraGoal)<.03){camera.position.copy(cameraGoal);controls.target.copy(targetGoal);cameraGoal=null;targetGoal=null}}controls.update();renderer.render(scene,camera)}animate();
-return{update,dispose(){disposed=true;cancelAnimationFrame(frame);resizeObserver.disconnect();renderer.domElement.removeEventListener('pointerdown',onPointerDown);renderer.domElement.removeEventListener('pointerup',onPointerUp);controls.dispose();scene.traverse(object=>{if(object.isMesh){object.geometry.dispose();if(Array.isArray(object.material))object.material.forEach(m=>m.dispose());else object.material.dispose()}});renderer.dispose();root.replaceChildren()}};
+ if(mode==='demo')flying.rotation.y=t*.17;if(mode==='demo')[[topPanels,gateState.top],[bottomPanels,gateState.bottom]].forEach(([panels,open])=>panels.forEach((panel,i)=>{const target=open?(i===0?-3.5:3.5):0;panel.position.x+=(target-panel.position.x)*.1}));if(cameraGoal){camera.position.lerp(cameraGoal,.11);controls.target.lerp(targetGoal,.11);if(camera.position.distanceTo(cameraGoal)<.03){camera.position.copy(cameraGoal);controls.target.copy(targetGoal);cameraGoal=null;targetGoal=null}}controls.update();renderer.render(scene,camera)}animate();
+return{update,dispose(){setRouteCutaway(null);disposed=true;cancelAnimationFrame(frame);resizeObserver.disconnect();renderer.domElement.removeEventListener('pointerdown',onPointerDown);renderer.domElement.removeEventListener('pointerup',onPointerUp);controls.dispose();scene.traverse(object=>{if(object.isMesh){object.geometry.dispose();if(Array.isArray(object.material))object.material.forEach(m=>m.dispose());else object.material.dispose()}});renderer.dispose();root.replaceChildren()}};
 }

@@ -4,7 +4,7 @@ import {ChevronUp,ChevronDown,Sparkles,X,ArrowUp,ArrowDown,Check,CarFront,Layers
 import {useRequestMotion} from './hooks/use-request-motion';
 import {Button} from './components/ui/button';
 import {Badge} from './components/ui/badge';
-import {GATE_PHASE_MS} from './lib/movement-timing';
+import {GATE_PHASE_MS,VEHICLE_TRANSIT_MS} from './lib/movement-timing';
 import MotionPresence from './components/motion-presence';
 import ShaftCamera from './components/shaft-camera';
 import MovementTimeline from './components/movement-timeline';
@@ -32,8 +32,8 @@ export default function App(){
  useRequestMotion(appRef,visibleRequests.map(r=>r.id),s.queue,requestFilter);
  useEffect(()=>{const close=e=>{if(e.key==='Escape')setHeaderPanel(null);};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close);},[]);
  const times=r=><dl className="car-times"><div><dt>Arrival</dt><dd>{r.arrival||'14:32'}</dd></div><div><dt>Departure</dt><dd>{r.departure==='Now'?'14:35':r.departure}</dd></div></dl>;
- useEffect(()=>{let t;if(s.active?.id==='C-204')t=setTimeout(()=>send('exit-demo'),7000);else if(s.shaft==='checking'&&!s.active)t=setTimeout(()=>send('verified'),1300);else if(s.active&&s.active.id!=='C-204'){let transition=(s.active.type==='arrival'?{authorizing:['reserved',1100],reserved:['gate-open',GATE_PHASE_MS],'gate-open':['gate-closing',1400],'gate-closing':['transit',GATE_PHASE_MS],transit:['confirming',4200],confirming:['finish',1400]}:{authorizing:['transit',1100],transit:['reserved',4200],reserved:['gate-open',GATE_PHASE_MS],'gate-open':['gate-closing',1400],'gate-closing':['confirming',GATE_PHASE_MS],confirming:['finish',1400]})[phase];if(transition)t=setTimeout(()=>transition[0]==='finish'?send('finish'):send('phase',{phase:transition[0]}),transition[1]);}return()=>clearTimeout(t);},[s.shaft,s.active?.id,phase]);
- useEffect(()=>{if(phase!=='transit'||s.active?.id==='C-204'){setProgress(0);return;}let begin=performance.now(),t=setInterval(()=>setProgress(Math.min(100,(performance.now()-begin)/42)),60);return()=>clearInterval(t);},[phase,s.active?.id]);
+ useEffect(()=>{let t;if(s.active?.id==='C-204')t=setTimeout(()=>send('exit-demo'),7000);else if(s.shaft==='checking'&&!s.active)t=setTimeout(()=>send('verified'),1300);else if(s.active&&s.active.id!=='C-204'){let transition=(s.active.type==='arrival'?{authorizing:['reserved',1100],reserved:['gate-open',GATE_PHASE_MS],'gate-open':['gate-closing',1400],'gate-closing':['transit',GATE_PHASE_MS],transit:['confirming',VEHICLE_TRANSIT_MS],confirming:['finish',1400]}:{authorizing:['transit',1100],transit:['reserved',VEHICLE_TRANSIT_MS],reserved:['gate-open',GATE_PHASE_MS],'gate-open':['gate-closing',1400],'gate-closing':['confirming',GATE_PHASE_MS],confirming:['finish',1400]})[phase];if(transition)t=setTimeout(()=>transition[0]==='finish'?send('finish'):send('phase',{phase:transition[0]}),transition[1]);}return()=>clearTimeout(t);},[s.shaft,s.active?.id,phase]);
+ useEffect(()=>{if(phase!=='transit'||s.active?.id==='C-204'){setProgress(0);return;}let begin=performance.now(),t=setInterval(()=>setProgress(Math.min(100,(performance.now()-begin)/VEHICLE_TRANSIT_MS*100)),60);return()=>clearInterval(t);},[phase,s.active?.id]);
  useEffect(()=>{saveSession(s);},[s]);
 
 
