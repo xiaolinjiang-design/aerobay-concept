@@ -10,7 +10,7 @@ if(mode==='app')root.querySelector('.gate-control').hidden=true;
 const viewport=root.querySelector('#viewport');
 const scene=new THREE.Scene();scene.background=new THREE.Color('#090d13');scene.fog=new THREE.Fog('#090d13',45,100);
 const camera=new THREE.PerspectiveCamera(36,1,.1,200);camera.position.set(25,22,29);
-const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;viewport.append(renderer.domElement);
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.localClippingEnabled=true;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;viewport.append(renderer.domElement);
 const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,5,0);controls.enableDamping=true;controls.dampingFactor=.055;controls.minDistance=mode==='app'?5:19;controls.maxDistance=95;controls.maxPolarAngle=Math.PI*.49;
 scene.add(new THREE.HemisphereLight('#c4d1e4','#111927',1.5));const sun=new THREE.DirectionalLight('#d6e1f2',2.0);sun.position.set(-12,28,14);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-30;sun.shadow.camera.right=30;sun.shadow.camera.top=30;sun.shadow.camera.bottom=-30;sun.shadow.bias=-.0002;scene.add(sun);
 const mat=(color,roughness=.82,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,metalness});
@@ -79,7 +79,7 @@ function car(parent,x,y,z,angle,color=white,styleIndex=0){
  }
  return g;
 }
-const perimeterMesh=new THREE.MeshPhysicalMaterial({color:'#5d7c90',transparent:true,opacity:.32,roughness:.65,metalness:.25,side:THREE.DoubleSide,depthWrite:false});
+const perimeterMesh=new THREE.MeshPhysicalMaterial({color:'#293440',roughness:.8,metalness:.15,side:THREE.DoubleSide});
 for(let level=0;level<6;level++){const group=new THREE.Group();garage.add(group);levels.push(group);const y=level*2.35;const slab=mesh(floorGeometry,white,group);slab.position.y=y;torus(12.68,.13,y+.38,edge,group);torus(4.18,.11,y+.39,steel,group);
  for(let i=0;i<12;i++){const a=i*Math.PI/6;for(const r of [6.55,11.75]){const x=r*Math.cos(a),z=r*Math.sin(a);line([x,z],[x+.01*Math.cos(a),z+.01*Math.sin(a)],y+.4,.035,edge,group)}const p1=[7.65*Math.cos(a),7.65*Math.sin(a)],p2=[12.25*Math.cos(a),12.25*Math.sin(a)];line(p1,p2,y+.405,.035,stripe,group);const mid=a+Math.PI/12;const tx=10.1*Math.cos(mid),tz=10.1*Math.sin(mid);const tick=mesh(new THREE.RingGeometry(.52,.57,40),teal,group);tick.rotation.x=-Math.PI/2;tick.position.set(tx,y+.41,tz);if(mode==='app'?i%2===0:(i+level)%6!==0){car(group,tx,y+.42,tz,-mid-Math.PI/2,carPaint[(i+level*3)%carPaint.length],(i+level*2)%carStyles.length);if(mode==='app')parkedCars.at(-1).bay=i/2+1}}
  for(let i=0;i<24;i++){const a=i*Math.PI/12;const innerR=4.3,outerR=12.65;const xi=innerR*Math.cos(a),zi=innerR*Math.sin(a),xo=outerR*Math.cos(a),zo=outerR*Math.sin(a);if(i%2===0){box(.17,1.25,.17,xo,y+1.01,zo,white,group);box(.13,.65,.13,xi,y+.75,zi,white,group)}const b=a+Math.PI/12;line([xo,zo],[outerR*Math.cos(b),outerR*Math.sin(b)],y+1.52,.055,white,group);line([xi,zi],[innerR*Math.cos(b),innerR*Math.sin(b)],y+1.08,.045,white,group)}
@@ -156,12 +156,33 @@ releaseButton.addEventListener('click',()=>{if(releaseButton.disabled)return;fly
 const hiddenMatrix=new THREE.Matrix4().makeScale(0,0,0);
 let cameraGoal=null,targetGoal=null,lastFocusKey=null,wasChoosing=false,lastRouteKey=null;
 const routeGroup=new THREE.Group();garage.add(routeGroup);
+const cutawayMaterials=[];
+function setRouteCutaway(route){
+ for(const {object,original,clipped} of cutawayMaterials){object.material=original;clipped.forEach(material=>material.dispose());}
+ cutawayMaterials.length=0;
+ root.dataset.cutaway=route?'destination-sector':'';
+ if(!route)return;
+ const angle=(route.bay-1)*Math.PI/3+Math.PI/12,halfWidth=Math.PI/7;
+ // The three planes remove only the sector above the destination, leaving its floor intact.
+ const planes=[
+  new THREE.Plane(new THREE.Vector3(Math.sin(angle-halfWidth),0,-Math.cos(angle-halfWidth)),0),
+  new THREE.Plane(new THREE.Vector3(-Math.sin(angle+halfWidth),0,Math.cos(angle+halfWidth)),0),
+  new THREE.Plane(new THREE.Vector3(0,-1,0),(route.floor-1)*2.35+.5),
+ ];
+ levels.forEach((group,index)=>{if(index<route.floor-1)return;group.traverse(object=>{
+  if(!object.isMesh)return;
+  const original=object.material,materials=Array.isArray(original)?original:[original];
+  const clipped=materials.map(material=>{const copy=material.clone();copy.clippingPlanes=planes;copy.clipIntersection=true;copy.clipShadows=true;return copy;});
+  object.material=Array.isArray(original)?clipped:clipped[0];cutawayMaterials.push({object,original,clipped});
+ });});
+}
 function overview(){
  selected='all';root.querySelectorAll('[data-level]').forEach(button=>button.classList.toggle('active',button.dataset.level==='all'));levels.forEach(group=>group.visible=true);roof.visible=false;
  const scale=Math.max(1,1.05/camera.aspect)*1.28;cameraGoal=new THREE.Vector3(25*scale,5+17*scale,29*scale);targetGoal=new THREE.Vector3(0,6.5,0);
  if(matchMedia('(prefers-reduced-motion: reduce)').matches){camera.position.copy(cameraGoal);controls.target.copy(targetGoal);cameraGoal=null;targetGoal=null;}
 }
 function showRoute(route){
+ setRouteCutaway(route);
  while(routeGroup.children.length){const child=routeGroup.children[0];child.geometry.dispose();child.material.dispose();routeGroup.remove(child);}
  root.dataset.route=route?`${route.id}: ${route.type==='arrival'?'Top gate to bay':'Bay to bottom gate'}`:'';
  if(!route)return;
@@ -169,8 +190,8 @@ function showRoute(route){
  const bay=new THREE.Vector3(10.1*Math.cos(angle),y,10.1*Math.sin(angle)),inner=new THREE.Vector3(3*Math.cos(angle),y,3*Math.sin(angle)),center=new THREE.Vector3(0,y,0),portal=new THREE.Vector3(0,route.type==='arrival'?17:-.2,0);
  const points=route.type==='arrival'?[portal,new THREE.Vector3(0,y+1,0),center,inner,bay]:[bay,inner,center,new THREE.Vector3(0,y-1,0),portal];
  const curve=new THREE.CatmullRomCurve3(points,false,'centripetal');
- for(const [radius,opacity,color] of [[.14,.18,'#a6afff'],[.035,1,'#e0e5ff']]){const trail=mesh(new THREE.TubeGeometry(curve,100,radius,8,false),new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthTest:false,depthWrite:false}),routeGroup);trail.renderOrder=15;trail.castShadow=false;}
- const end=mesh(new THREE.SphereGeometry(.18,16,12),new THREE.MeshBasicMaterial({color:'#b9b5ff',depthTest:false}),routeGroup);end.position.copy(points.at(-1));end.renderOrder=16;end.castShadow=false;
+ for(const [radius,opacity,color] of [[.065,.1,'#c5d0df'],[.025,.9,'#dce5ee']]){const trail=mesh(new THREE.TubeGeometry(curve,100,radius,8,false),new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthTest:true,depthWrite:false}),routeGroup);trail.renderOrder=0;trail.castShadow=false;}
+ const end=mesh(new THREE.SphereGeometry(.12,16,12),new THREE.MeshBasicMaterial({color:'#dce5ee',depthTest:true}),routeGroup);end.position.copy(points.at(-1));end.renderOrder=0;end.castShadow=false;
 }
 
 function focusSpot({floor,bay}){
