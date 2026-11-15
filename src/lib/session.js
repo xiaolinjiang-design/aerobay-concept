@@ -1,5 +1,5 @@
 import { initial } from './parking';
-const storageKey = 'halo-parking-session-v1';
+const storageKey = 'halo-parking-session-v2';
 export function loadSession() {
   try {
     const raw = localStorage.getItem(storageKey);
