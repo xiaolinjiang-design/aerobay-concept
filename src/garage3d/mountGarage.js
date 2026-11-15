@@ -157,7 +157,7 @@ function focusSpot({floor,bay}){
  if(!Number.isInteger(floor)||!Number.isInteger(bay)||floor<1||floor>6||bay<1||bay>6)return;
  const angle=(bay-1)*Math.PI/3+Math.PI/12,x=10.1*Math.cos(angle),z=10.1*Math.sin(angle),y=(floor-1)*2.35+.8;
  selected=String(floor);root.querySelectorAll('[data-level]').forEach(button=>button.classList.toggle('active',button.dataset.level===selected));levels.forEach((group,index)=>group.visible=index===floor-1);
- roof.visible=false;roofToggle.setAttribute('aria-pressed','true');roofToggle.textContent='SHOW ROOF';
+ roof.visible=false;
  targetGoal=new THREE.Vector3(x,y,z);cameraGoal=new THREE.Vector3(x-5.5*Math.cos(angle)-5*Math.sin(angle),y+8.5,z-5.5*Math.sin(angle)+5*Math.cos(angle));
  flying.visible=false;flightGlow.visible=false;
 }
