@@ -210,3 +210,14 @@ html[data-input=keyboard] #halo-linear-app .spot-assignment,html[data-input=keyb
 #halo-linear-app .request-pane-header .request-filters[hidden]{display:none}
 #halo-linear-app .requests-collapsed .request-pane-header{padding-bottom:0}
 #halo-linear-app .requests-collapsed .request-pane-header>.pane-title{margin-bottom:0}
+
+#halo-linear-app .main-navigation{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;gap:4px;padding:3px;border:1px solid #292b30;border-radius:999px;background:#1a1b1f}
+#halo-linear-app .main-navigation .ui-button{min-height:30px;padding:6px 20px;border-radius:999px;font-size:11px;font-weight:500;color:var(--secondary)}
+#halo-linear-app .main-navigation .ui-button:disabled{opacity:1;color:var(--muted)}
+#halo-linear-app .main-navigation .ui-button[aria-current=page]{background:#eceef1;color:#20232a;box-shadow:0 1px 3px #0003}
+@media(max-width:640px){
+ #halo-linear-app .app-header{height:104px;align-items:flex-start;padding-top:10px}
+ #halo-linear-app .app-header .wordmark{margin-top:6px}
+ #halo-linear-app .main-navigation{top:58px;transform:translateX(-50%);width:max-content}
+ #halo-linear-app .main-navigation .ui-button{padding-inline:18px}
+}
