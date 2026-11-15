@@ -25,3 +25,14 @@ test('direct popover assignment reserves and queues atomically without starting 
 test('popover assignment rejects occupied or out-of-range spots and departures',()=>{
  const s=initial();for(const action of[{id:'C-118',floor:4,bay:1},{id:'C-118',floor:8,bay:1},{id:'C-076',floor:4,bay:6}])assert.equal(reducer(s,{type:'assign-spot',...action}),s);
 });
+
+import {suggestedSpots,gateDistance} from './parking.js';
+test('suggestions rank available spots by roof-gate route distance',()=>{
+ const state=initial();
+ const spots=suggestedSpots(state);
+ assert.equal(spots[0].floor,6);
+ assert.ok(spots.every((spot,i)=>i===0||gateDistance(spots[i-1])<=gateDistance(spot)));
+ const first=spots[0];
+ const next=suggestedSpots({...state,overrides:{[first.floor+'-'+first.bay]:'occupied'}});
+ assert.ok(!next.some(spot=>spot.floor===first.floor&&spot.bay===first.bay));
+});

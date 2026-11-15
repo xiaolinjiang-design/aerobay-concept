@@ -31,3 +31,12 @@ export function parkingTime(car){
  const format=m=>`${Math.floor(m/60)}h ${m%60}m`;
  return {percent:duration?elapsed/duration*100:0,elapsed:format(elapsed),remaining:format(duration-elapsed)};
 }
+
+// Prototype route: roof gate above F6, 4 m per floor, then 8 m from shaft to bay.
+// Bays share a radius, so bays on the same floor have equal route lengths.
+export const gateDistance=spot=>(7-spot.floor)*4+8;
+export function suggestedSpots(state){
+ return Array.from({length:6},(_,i)=>Array.from({length:6},(_,j)=>({floor:i+1,bay:j+1}))).flat()
+  .filter(spot=>spaceStatus(state,spot.floor,spot.bay)==='available')
+  .sort((a,b)=>gateDistance(a)-gateDistance(b)||a.bay-b.bay);
+}
