@@ -105,3 +105,15 @@ html[data-input=keyboard] #halo-linear-app .spot-assignment,html[data-input=keyb
 #halo-linear-app .early-request-times{grid-template-columns:1fr 1.25fr;gap:8px}#halo-linear-app .early-request-times dt{font-size:9px}#halo-linear-app .early-request-times dd{font-size:11px;white-space:nowrap}#halo-linear-app .early-request-times s{color:var(--muted)}#halo-linear-app .early-request-difference{display:block;margin-top:8px;text-align:right}
 
 #halo-linear-app .camera-gate-left,#halo-linear-app .camera-gate-right{transition:transform var(--gate-travel,3600ms) cubic-bezier(.45,.05,.55,.95)}@media(prefers-reduced-motion:reduce){#halo-linear-app .camera-gate-left,#halo-linear-app .camera-gate-right{transition:none}}
+
+#halo-linear-app .garage-3d-root{position:absolute;inset:0;z-index:0;min-height:420px}
+#halo-linear-app .garage-view-switch{position:absolute;left:18px;bottom:18px;z-index:6;display:flex;gap:3px;padding:3px;border:1px solid #81939888;border-radius:7px;background:#f2f6f4e8;box-shadow:0 6px 18px #24303b25}
+#halo-linear-app .garage-view-switch button{border:0;border-radius:4px;background:transparent;color:#52686e;padding:7px 12px;font:600 11px Arial,sans-serif;cursor:pointer}
+#halo-linear-app .garage-view-switch button[aria-pressed="true"]{background:#587f80;color:white}
+#halo-linear-app .garage-view-switch button:focus-visible{outline:2px solid #8db8b7;outline-offset:2px}
+#halo-linear-app .garage-3d-root .controls{bottom:18px}
+#halo-linear-app .garage-3d-root{left:280px;right:320px;width:auto}
+#halo-linear-app .garage-view-switch{left:300px}
+#halo-linear-app .garage-3d-root .floor-control{top:250px;right:18px}
+@media(max-width:1100px){#halo-linear-app .garage-3d-root{left:245px;right:285px}#halo-linear-app .garage-view-switch{left:260px}}
+@media(max-width:760px){#halo-linear-app .garage-3d-root{left:0;right:0}#halo-linear-app .garage-view-switch{left:16px}}

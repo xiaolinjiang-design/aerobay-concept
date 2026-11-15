@@ -5,4 +5,5 @@ export default defineConfig({
   esbuild: { jsx: 'automatic' },
   server: { port: 5173, strictPort: true },
   preview: { port: 4173, strictPort: true },
+  build: { rollupOptions: { input: { main: fileURLToPath(new URL('./index.html', import.meta.url)), concept: fileURLToPath(new URL('./concept.html', import.meta.url)) } } },
 });
