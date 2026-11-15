@@ -19,3 +19,9 @@ test('dispatch requires verified clearance, queue head and release from hold',()
 test('parking and departure update occupancy and require new shaft verification',()=>{
  let s=arrivalQueued();s=reducer(s,{type:'exit-demo'});s=reducer(s,{type:'verified'});s=reducer(s,{type:'start',id:'C-118'});s=reducer(s,{type:'finish'});assert.equal(spaceStatus(s,4,6),'occupied');assert.equal(s.shaft,'checking');s=reducer(s,{type:'select',id:'C-076'});s=reducer(s,{type:'enqueue'});s=reducer(s,{type:'verified'});s=reducer(s,{type:'start',id:'C-076'});s=reducer(s,{type:'finish'});assert.equal(spaceStatus(s,2,1),'available');assert.equal(s.shaft,'checking');
 });
+test('direct popover assignment reserves and queues atomically without starting movement',()=>{
+ let s=initial();s=reducer(s,{type:'assign-spot',id:'C-118',floor:4,bay:6});assert.deepEqual(s.queue,['C-118']);assert.equal(spaceStatus(s,4,6),'reserved');assert.equal(s.active.id,'C-204');assert.equal(s.choosing,false);assert.equal(reducer(s,{type:'assign-spot',id:'C-118',floor:4,bay:3}),s);
+});
+test('popover assignment rejects occupied or out-of-range spots and departures',()=>{
+ const s=initial();for(const action of[{id:'C-118',floor:4,bay:1},{id:'C-118',floor:8,bay:1},{id:'C-076',floor:4,bay:6}])assert.equal(reducer(s,{type:'assign-spot',...action}),s);
+});

@@ -9,6 +9,7 @@ export function reducer(s,a){switch(a.type){
  case'choose':return{...s,choosing:true,choice:null};
  case'cancel':return{...s,choosing:false,choice:null};
  case'bay':return s.choosing&&spaceStatus(s,a.floor,a.bay)==='available'?{...s,choice:{floor:a.floor,bay:a.bay}}:s;
+ case'assign-spot':{const r=s.requests.find(r=>r.id===a.id);if(!r||r.type!=='arrival'||r.status!=='new'||!Number.isInteger(a.floor)||!Number.isInteger(a.bay)||a.floor<1||a.floor>6||a.bay<1||a.bay>6||spaceStatus(s,a.floor,a.bay)!=='available')return s;return reducer({...s,selected:a.id,choosing:true,choice:{floor:a.floor,bay:a.bay}},{type:'enqueue'});}
  case'enqueue':{let r=s.requests.find(r=>r.id===s.selected);if(!r||r.status!=='new'||r.type==='arrival'&&(!s.choice||spaceStatus(s,s.choice.floor,s.choice.bay)!=='available'))return s;let assigned=r.type==='arrival'?s.choice:{};return{...s,requests:s.requests.map(x=>x.id===r.id?{...x,...assigned,status:'queued',held:false}:x),queue:[...s.queue,r.id],choosing:false,choice:null,event:r.id+' added to the shaft queue. Movement still requires approval.'};}
  case'hold':return{...s,requests:s.requests.map(r=>r.id===a.id&&r.status==='queued'?{...r,held:!r.held}:r)};
  case'exit-demo':if(s.active?.id!=='C-204')return s;return{...s,active:null,shaft:'checking',overrides:{...s.overrides,'3-2':'available'},event:'C-204 exited. Verifying shaft clearance.'};
