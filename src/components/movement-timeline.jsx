@@ -5,7 +5,7 @@ export default function MovementTimeline({movement,progress=0,complete=false,che
  if(movement)lastMovement.current=movement;
  const idle=!movement,arrival=(movement||lastMovement.current)?.type!=='departure',phase=movement?.phase;
  const parked=arrival&&!idle&&(phase==='confirming'||complete);
- const labels=arrival?['Safety check','Top gate open','Entering','Top gate closed',parked?'Parked':'Parking']:['Safety check','Descending','Bottom gate open','Exiting','Bottom gate closed','Departed'];
+ const labels=arrival?['Safety check','Gate open','Entering','Gate closed',parked?'Parked':'Parking']:['Safety check','Descending','Gate open','Exiting','Gate closed','Departed'];
  const icons=arrival?[ScanLine,LogIn,CarFront,LockKeyhole,parked?Check:CarFront]:[ScanLine,ArrowDown,LogIn,CarFront,LockKeyhole,Check];
  const current=idle?-1:complete?labels.length:(arrival?{authorizing:0,reserved:1,'gate-open':2,'gate-closing':3,transit:4,confirming:4}:{authorizing:0,transit:1,reserved:2,'gate-open':3,'gate-closing':4,confirming:5})[phase]??0;
  const gate=complete||!['reserved','gate-open','gate-closing'].includes(phase)?'closed':phase==='reserved'?'opening':phase==='gate-closing'?'closing':'open';
