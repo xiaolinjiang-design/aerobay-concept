@@ -1,7 +1,7 @@
 import React from 'react';
 import {ScanLine,LogIn,LockKeyhole,CarFront,Check,ArrowDown} from 'lucide-react';
 export default function MovementTimeline({movement,progress=0,complete=false,checking=false}){
- if(!movement)return <section className="movement-timeline timeline-empty" aria-label="Movement timeline"><h3 className="shaft-card-title">Shaft</h3><CarFront size={18}/><span>{checking?'Verifying shaft clearance':'No active movement'}</span></section>;
+ if(!movement)return <section className="movement-timeline timeline-empty" aria-label="Movement timeline"><h3 className="shaft-card-title">Shaft</h3><div className="shaft-empty-copy"><strong>{checking?'Checking clearance':'Free'}</strong><span>{checking?'Verifying the shaft is empty':'Ready for the next car'}</span></div></section>;
  const arrival=movement.type==='arrival',phase=movement.phase;
  const labels=arrival?['Safety check','Top gate open','Entering','Top gate closed','Parking','Parked']:['Safety check','Descending','Bottom gate open','Exiting','Bottom gate closed','Departed'];
  const icons=arrival?[ScanLine,LogIn,CarFront,LockKeyhole,CarFront,Check]:[ScanLine,ArrowDown,LogIn,CarFront,LockKeyhole,Check];
