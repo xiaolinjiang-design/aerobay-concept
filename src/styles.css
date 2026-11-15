@@ -75,3 +75,5 @@ html,body,#root{margin:0;min-width:320px;min-height:100%;background:#010102}body
  #halo-linear-app .movement-timeline .step-label{font-size:9px}
 }
 @media(min-width:1000px){#halo-linear-app .spot-assignment{left:280px}}
+
+#halo-linear-app .shaft-card-title{font-size:12px;font-weight:500;color:var(--secondary);margin:0 0 10px}#halo-linear-app .movement-timeline .timeline-heading{margin-bottom:12px}#halo-linear-app .timeline-empty{position:relative}#halo-linear-app .timeline-empty .shaft-card-title{position:absolute;top:16px;left:18px}@media(min-width:1000px){#halo-linear-app .overview-row .movement-timeline{height:164px}#halo-linear-app .overview-row .occupancy-overview{height:164px}#halo-linear-app .scene-toolbar{top:202px}#halo-linear-app .isometric-stage,#halo-linear-app .isometric-stage.floor-focus{margin-top:192px}}
