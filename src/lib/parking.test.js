@@ -36,3 +36,17 @@ test('suggestions rank available spots by roof-gate route distance',()=>{
  const next=suggestedSpots({...state,overrides:{[first.floor+'-'+first.bay]:'occupied'}});
  assert.ok(!next.some(spot=>spot.floor===first.floor&&spot.bay===first.bay));
 });
+
+test('timed requests alternate arrivals and valid departures without authorizing movement',()=>{
+ let state=reducer(initial(),{type:'new-request'});
+ assert.equal(state.requests.at(-1).type,'arrival');
+ assert.equal(state.requests.at(-1).status,'new');
+ state=reducer(state,{type:'new-request'});
+ const departure=state.requests.at(-1);
+ assert.equal(departure.type,'departure');
+ assert.equal(spaceStatus(state,departure.floor,departure.bay),'occupied');
+ assert.deepEqual(state.queue,[]);
+ const ids=[];
+ for(let i=0;i<12;i++){state=reducer(state,{type:'new-request'});ids.push(state.requests.at(-1).id);}
+ assert.equal(new Set(ids).size,ids.length);
+});

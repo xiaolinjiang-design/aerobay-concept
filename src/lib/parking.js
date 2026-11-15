@@ -5,6 +5,7 @@ const baseEmpty=(f,n)=>(f+n)%3===1;
 export function spaceStatus(s,f,n){let k=f+'-'+n;if(s.overrides[k])return s.overrides[k];if(s.requests.some(r=>r.type==='arrival'&&r.status!=='new'&&r.status!=='complete'&&key(r)===k))return'reserved';return baseEmpty(f,n)?'available':'occupied';}
 export function reducer(s,a){switch(a.type){
  case'reset':return initial();
+ case'new-request':return addTimedRequest(s);
  case'select':return{...s,selected:a.id,choosing:false,choice:null};
  case'choose':return{...s,choosing:true,choice:null};
  case'cancel':return{...s,choosing:false,choice:null};
@@ -39,4 +40,18 @@ export function suggestedSpots(state){
  return Array.from({length:6},(_,i)=>Array.from({length:6},(_,j)=>({floor:i+1,bay:j+1}))).flat()
   .filter(spot=>spaceStatus(state,spot.floor,spot.bay)==='available')
   .sort((a,b)=>gateDistance(a)-gateDistance(b)||a.bay-b.bay);
+}
+
+export function addTimedRequest(state){
+ const sequence=(state.requestSequence||0)+1;
+ const format=minutes=>`${String(Math.floor(minutes/60)%24).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`;
+ const now=14*60+32+sequence;
+ const departureSpot=sequence%2===0?Array.from({length:6},(_,i)=>Array.from({length:6},(_,j)=>({floor:i+1,bay:j+1}))).flat().find(spot=>{
+  if(spaceStatus(state,spot.floor,spot.bay)!=='occupied'||state.active&&key(state.active)===key(spot))return false;
+  const car=parkedVehicle(state,spot.floor,spot.bay);
+  return !state.requests.some(r=>r.id===car.id)&&!state.requests.some(r=>key(r)===key(spot)&&r.status!=='complete');
+ }):null;
+ const vehicle=departureSpot?parkedVehicle(state,departureSpot.floor,departureSpot.bay):null;
+ const request=departureSpot?{...departureSpot,id:vehicle.id,type:'departure',status:'new',arrival:vehicle.arrival,departure:format(now)}:{id:`C-${1000+sequence}`,type:'arrival',status:'new',floor:null,bay:null,arrival:format(now),departure:format(now+120)};
+ return {...state,requestSequence:sequence,requests:[...state.requests,request],event:request.id+(request.type==='arrival'?' requested parking.':' requested departure.')};
 }
