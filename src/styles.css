@@ -197,3 +197,8 @@ html[data-input=keyboard] #halo-linear-app .spot-assignment,html[data-input=keyb
 
 #halo-linear-app .request-filters{flex-wrap:nowrap;gap:4px}
 #halo-linear-app .request-filter-pill{padding-inline:6px;gap:4px;white-space:nowrap;flex:0 0 auto}
+
+#halo-linear-app .movement-steps{width:100%;--timeline-node-size:27px}
+#halo-linear-app .movement-steps li:last-child{flex:0 0 var(--timeline-node-size)}
+#halo-linear-app .movement-steps li:last-child .step-label,#halo-linear-app .movement-steps li:last-child .step-state{position:relative;left:100%;transform:translateX(-100%);width:max-content;max-width:80px;padding-right:0;text-align:right}
+@media(max-width:560px){#halo-linear-app .movement-steps{--timeline-node-size:24px}}
