@@ -86,3 +86,5 @@ html,body,#root{margin:0;min-width:320px;min-height:100%;background:#010102}body
 #halo-linear-app .suggested-spots>.recommendation-heading{display:flex;align-items:center;gap:7px}#halo-linear-app .recommendation-heading svg{color:#a4abdc;flex-shrink:0}
 
 #halo-linear-app .shaft-empty-copy{display:flex;flex-direction:column;align-items:center;gap:5px}#halo-linear-app .shaft-empty-copy strong{font-size:16px;font-weight:500;color:var(--foreground)}#halo-linear-app .shaft-empty-copy span{font-size:11px;color:var(--muted)}
+
+.draggable-spot-header{cursor:grab;touch-action:none;user-select:none}.draggable-spot-header:active{cursor:grabbing}.draggable-spot-header .spot-close{cursor:pointer}
