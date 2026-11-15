@@ -74,3 +74,4 @@ html,body,#root{margin:0;min-width:320px;min-height:100%;background:#010102}body
  #halo-linear-app .isometric-stage,#halo-linear-app .isometric-stage.floor-focus{margin-top:170px}
  #halo-linear-app .movement-timeline .step-label{font-size:9px}
 }
+@media(min-width:1000px){#halo-linear-app .spot-assignment{left:280px}}
