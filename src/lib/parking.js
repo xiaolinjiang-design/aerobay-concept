@@ -52,6 +52,12 @@ export function addTimedRequest(state){
   return !state.requests.some(r=>r.id===car.id)&&!state.requests.some(r=>key(r)===key(spot)&&r.status!=='complete');
  }):null;
  const vehicle=departureSpot?parkedVehicle(state,departureSpot.floor,departureSpot.bay):null;
- const request=departureSpot?{...departureSpot,id:vehicle.id,type:'departure',status:'new',arrival:vehicle.arrival,departure:format(now)}:{id:`C-${1000+sequence}`,type:'arrival',status:'new',floor:null,bay:null,arrival:format(now),departure:format(now+120)};
+ const request=departureSpot?{...departureSpot,id:vehicle.id,type:'departure',status:'new',arrival:vehicle.arrival,bookedDeparture:vehicle.bookedDeparture||vehicle.departure,departure:format(now)}:{id:`C-${1000+sequence}`,type:'arrival',status:'new',floor:null,bay:null,arrival:format(now),departure:format(now+120)};
  return {...state,requestSequence:sequence,requests:[...state.requests,request],event:request.id+(request.type==='arrival'?' requested parking.':' requested departure.')};
+}
+
+export function earlyDeparture(request){
+ if(request.type!=='departure')return null;
+ const booking=request.bookedDeparture||(request.id===`C-${300+request.floor*10+request.bay}`?['16:30','17:00','18:00'][request.floor%3]:null);
+ return booking&&request.departure<booking?booking:null;
 }

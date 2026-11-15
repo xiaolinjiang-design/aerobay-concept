@@ -88,3 +88,5 @@ html,body,#root{margin:0;min-width:320px;min-height:100%;background:#010102}body
 #halo-linear-app .shaft-empty-copy{display:flex;flex-direction:column;align-items:center;gap:5px}#halo-linear-app .shaft-empty-copy strong{font-size:16px;font-weight:500;color:var(--foreground)}#halo-linear-app .shaft-empty-copy span{font-size:11px;color:var(--muted)}
 
 .draggable-spot-header{cursor:grab;touch-action:none;user-select:none}.draggable-spot-header:active{cursor:grabbing}.draggable-spot-header .spot-close{cursor:pointer}
+
+#halo-linear-app .request-card .ui-card-footer .early-departure-label{margin-right:auto;color:#e7b583;background:#e3824012;border:1px solid #e382402b;padding:4px 6px;font-size:9px;white-space:nowrap}#halo-linear-app .request-card .ui-card-footer:has(.early-departure-label){gap:6px}

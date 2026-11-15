@@ -50,3 +50,11 @@ test('timed requests alternate arrivals and valid departures without authorizing
  for(let i=0;i<12;i++){state=reducer(state,{type:'new-request'});ids.push(state.requests.at(-1).id);}
  assert.equal(new Set(ids).size,ids.length);
 });
+
+import {earlyDeparture} from './parking.js';
+test('early departure label compares requested time with booking',()=>{
+ assert.equal(earlyDeparture({type:'departure',departure:'14:34',bookedDeparture:'17:00'}),'17:00');
+ assert.equal(earlyDeparture({type:'departure',departure:'17:00',bookedDeparture:'17:00'}),null);
+ assert.equal(earlyDeparture({type:'arrival',departure:'14:34',bookedDeparture:'17:00'}),null);
+ assert.equal(earlyDeparture({type:'departure',id:'C-311',floor:1,bay:1,departure:'14:34'}),'17:00');
+});
