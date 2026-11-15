@@ -51,3 +51,5 @@ html,body,#root{margin:0;min-width:320px;min-height:100%;background:#010102}body
 #halo-linear-app{--arrival:#f4ce19;--departure:#e38240}#halo-linear-app .movement-type-badge.movement-type-arrival{color:var(--arrival);background:#f4ce1917;border-color:#f4ce1940}#halo-linear-app .movement-type-badge.movement-type-departure{color:var(--departure);background:#e3824017;border-color:#e3824040}
 
 #halo-linear-app .spot-assignment .more-spot-options{align-self:center;flex-shrink:0;width:32px;min-height:38px;padding:6px;margin-top:20px}#halo-linear-app .spot-assignment{flex-wrap:nowrap}@media(max-width:560px){#halo-linear-app .spot-assignment .more-spot-options{margin-top:0}}
+
+#halo-linear-app .spot-assignment{position:relative;padding-top:18px}#halo-linear-app .close-suggestions{position:absolute;right:7px;top:5px;width:26px;min-height:26px;padding:4px;z-index:1}#halo-linear-app .suggested-spots>.secondary{display:block;padding-right:24px}@media(min-width:1000px){#halo-linear-app .spot-assignment{position:absolute;padding-top:18px}}
