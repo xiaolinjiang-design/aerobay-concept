@@ -172,7 +172,8 @@ function resize(){
   const requestBounds=app.querySelector('.queue-pane').getBoundingClientRect(),queueBounds=app.querySelector('.right-queue').getBoundingClientRect();
   left=requestBounds.right-bounds.left+20;right=queueBounds.left-bounds.left-20;
   const cards=[...app.querySelectorAll('.movement-timeline,.occupancy-overview,.shaft-camera')];
-  top=Math.max(...cards.map(card=>card.getBoundingClientRect().bottom-bounds.top))+20;
+  top=Math.max(...cards.map(card=>card.getBoundingClientRect().bottom-bounds.top))+68;
+  right-=48;
   const suggestions=app.querySelector('.spot-assignment');
   if(suggestions)bottom=Math.min(bottom,suggestions.getBoundingClientRect().top-bounds.top-16);
  }
