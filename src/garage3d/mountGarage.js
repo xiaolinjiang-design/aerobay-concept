@@ -204,13 +204,14 @@ releaseButton.addEventListener('click',()=>{if(releaseButton.disabled)return;fly
 const hiddenMatrix=new THREE.Matrix4().makeScale(0,0,0);
 let cameraGoal=null,targetGoal=null,lastFocusKey=null,wasChoosing=false,lastRouteKey=null;
 let activePhaseKey=null,activePhaseStart=performance.now(),movementViewKey=null;
-const routeGroup=new THREE.Group();garage.add(routeGroup);
+const routeGroup=new THREE.Group();garage.add(routeGroup);let routeNavigation=null;
 function overview(){
  selected='all';root.querySelectorAll('[data-level]').forEach(button=>button.classList.toggle('active',button.dataset.level==='all'));levels.forEach(group=>group.visible=true);roof.visible=true;topGate.visible=true;tunnel.visible=true;base.visible=true;ground.visible=true;bottomPanels.forEach(panel=>panel.visible=true);
  const pose=towerOverviewPose(camera);cameraGoal=pose.position;targetGoal=pose.target;controls.maxDistance=Math.max(95,pose.position.distanceTo(pose.target)*1.3);
  if(matchMedia('(prefers-reduced-motion: reduce)').matches){camera.position.copy(cameraGoal);controls.target.copy(targetGoal);cameraGoal=null;targetGoal=null;}
 }
 function showRoute(route){
+ routeNavigation=null;routeGroup.visible=true;
  while(routeGroup.children.length){const child=routeGroup.children[0];child.geometry.dispose();child.material.dispose();routeGroup.remove(child);}
  root.dataset.route=route?`${route.id}: ${route.type==='arrival'?gateName(route)+' to bay':'Bay to '+gateName(route)}`:'';
  if(!route)return;
@@ -219,22 +220,46 @@ function showRoute(route){
  const points=route.type==='arrival'?[portal,center,inner,bay]:[bay,inner,center,portal];
  const curve=new THREE.CurvePath();points.slice(1).forEach((point,index)=>curve.add(new THREE.LineCurve3(points[index],point)));
  const routeColor=new THREE.Color(getComputedStyle(root).getPropertyValue('--primary').trim()||'#5e6ad2');
+ const trails=[];
  for(const [radius,opacity] of [[.16,.035],[.085,.12],[.035,.98]]){
-  const trail=mesh(new THREE.TubeGeometry(curve,100,radius,12,false),new THREE.MeshBasicMaterial({color:routeColor,transparent:true,opacity,blending:radius>.035?THREE.AdditiveBlending:THREE.NormalBlending,toneMapped:false,depthTest:true,depthWrite:false}),routeGroup);
-  trail.castShadow=false;
+  const trail=mesh(new THREE.TubeGeometry(curve,160,radius,12,false),new THREE.MeshBasicMaterial({color:routeColor,transparent:true,opacity,blending:radius>.035?THREE.AdditiveBlending:THREE.NormalBlending,toneMapped:false,depthTest:true,depthWrite:false}),routeGroup);
+  trail.castShadow=false;trails.push(trail);
  }
- const routeLength=curve.getLength();
- for(let distance=2;distance<routeLength-1;distance+=2.6){
-  const progress=distance/routeLength,direction=curve.getTangent(progress).normalize();
-  const side=Math.abs(direction.y)>.9?new THREE.Vector3(1,0,-1).normalize():new THREE.Vector3().crossVectors(new THREE.Vector3(0,1,0),direction).normalize();
-  const back=direction.clone().multiplyScalar(-.42),tip=direction.clone().multiplyScalar(.42);
-  const left=back.clone().addScaledVector(side,.38),right=back.clone().addScaledVector(side,-.38),chevron=new THREE.CurvePath();
-  chevron.add(new THREE.LineCurve3(left,tip));chevron.add(new THREE.LineCurve3(tip,right));
-  const arrow=mesh(new THREE.TubeGeometry(chevron,12,.045,6,false),new THREE.MeshBasicMaterial({color:routeColor.clone().lerp(new THREE.Color('#ffffff'),.45),toneMapped:false,depthTest:true}),routeGroup);
-  arrow.name='Route direction arrow';arrow.position.copy(curve.getPoint(progress));arrow.castShadow=false;
+ const completed=mesh(new THREE.TubeGeometry(curve,160,.035,12,false),new THREE.MeshBasicMaterial({color:'#b7bbdc',transparent:true,opacity:.26,toneMapped:false,depthTest:true,depthWrite:false}),routeGroup);
+ completed.geometry.setDrawRange(0,0);completed.castShadow=false;
+ const chevron=new THREE.CurvePath();
+ chevron.add(new THREE.LineCurve3(new THREE.Vector3(-.3,0,-.34),new THREE.Vector3(0,0,.34)));
+ chevron.add(new THREE.LineCurve3(new THREE.Vector3(0,0,.34),new THREE.Vector3(.3,0,-.34)));
+ const arrow=mesh(new THREE.TubeGeometry(chevron,12,.065,6,false),new THREE.MeshBasicMaterial({color:'#d1d4ff',toneMapped:false,depthTest:true}),routeGroup);
+ arrow.name='Route direction arrow';arrow.castShadow=false;
+ const endpoint=mesh(new THREE.ConeGeometry(.24,.6,20),new THREE.MeshBasicMaterial({color:'#edb34c',toneMapped:false,depthTest:true}),routeGroup);
+ endpoint.rotation.z=Math.PI;endpoint.position.copy(points.at(-1)).add(new THREE.Vector3(0,1.15,0));endpoint.name='Destination marker';endpoint.castShadow=false;
+ routeNavigation={id:route.id,curve,points,length:curve.getLength(),trails,completed,arrow,endpoint,progress:0};
+ updateRouteNavigation(null);
+
+}
+
+function updateRouteNavigation(active,pose){
+ const nav=routeNavigation;if(!nav)return;
+ const moving=active?.id===nav.id;
+ const complete=moving&&(active.type==='arrival'?active.phase==='confirming':['gate-closing','confirming'].includes(active.phase));
+ routeGroup.visible=!complete;if(complete){root.dataset.routeProgress='1';return;}
+ if(moving&&pose){
+  const position=new THREE.Vector3(pose.x,pose.y,pose.z);let closest=Infinity,distance=0,along=0;
+  for(let i=1;i<nav.points.length;i++){
+   const start=nav.points[i-1],delta=nav.points[i].clone().sub(start),length=delta.length();
+   const t=THREE.MathUtils.clamp(position.clone().sub(start).dot(delta)/delta.lengthSq(),0,1);
+   const error=start.clone().addScaledVector(delta,t).distanceToSquared(position);
+   if(error<closest){closest=error;distance=along+length*t;}along+=length;
+  }
+  nav.progress=Math.max(nav.progress,distance/nav.length);
  }
- const end=mesh(new THREE.SphereGeometry(.12,16,12),new THREE.MeshBasicMaterial({color:routeColor,toneMapped:false,depthTest:true}),routeGroup);end.position.copy(points.at(-1));end.castShadow=false;
- const endGlow=mesh(new THREE.SphereGeometry(.23,16,12),new THREE.MeshBasicMaterial({color:routeColor,transparent:true,opacity:.09,blending:THREE.AdditiveBlending,toneMapped:false,depthTest:true,depthWrite:false}),routeGroup);endGlow.position.copy(end.position);endGlow.castShadow=false;
+ const segments=Math.floor(nav.progress*160),split=segments*12*6,total=160*12*6;
+ nav.trails.forEach(trail=>trail.geometry.setDrawRange(split,total-split));nav.completed.geometry.setDrawRange(0,split);
+ const t=THREE.MathUtils.clamp(nav.progress+.55/nav.length,0,.9999);
+ nav.arrow.position.copy(nav.curve.getPointAt(t));
+ nav.arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),nav.curve.getTangentAt(t).normalize());
+ root.dataset.routeProgress=nav.progress.toFixed(3);
 }
 
 function focusSpot({floor,bay}){
@@ -293,6 +318,7 @@ const clock=new THREE.Clock();let frame;function animate(){if(disposed)return;fr
   const active=currentState.active,phaseElapsed=performance.now()-activePhaseStart;
   const pose=vehiclePose(active,pointerReducedMotion.matches?0:phaseElapsed);
   flying.position.set(pose.x,pose.y,pose.z);flying.rotation.y=pose.heading;
+  updateRouteNavigation(active,pose);
   const travel=phaseElapsed/VEHICLE_TRANSIT_MS,lateral=active.phase==='confirming'||(active.phase==='transit'&&(active.type==='arrival'?travel>=.56:travel<.44))||(active.type==='departure'&&active.phase==='authorizing');
   const floor=active.floor;
   const gateVisible=gateFor(active)==='top';
