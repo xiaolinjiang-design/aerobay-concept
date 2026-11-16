@@ -101,3 +101,16 @@ test('demo request rebalance converts half the arrivals once, using unique occup
  const limited=rebalanceDemoRequests(full);
  assert.equal(limited.requests.filter(r=>r.type==='departure').length,48);
 });
+
+test('switching recommendation gate reranks bays and preserves the chosen gate through dispatch',async()=>{
+ const {suggestedSpots,gateFor}=await import('./parking.js');
+ let s={...initial(),active:null,shaft:'clear',choosing:true};
+ const top=suggestedSpots(s)[0];
+ s=reducer(s,{type:'recommendation-gate',gate:'bottom'});
+ const bottom=suggestedSpots(s)[0];
+ assert.ok(bottom.floor<top.floor);
+ s=reducer(s,{type:'assign-spot',id:s.selected,...bottom});
+ assert.equal(gateFor(s.requests.find(r=>r.id===s.selected)),'bottom');
+ s=reducer(s,{type:'start',id:s.selected});
+ assert.equal(s.active.gate,'bottom');
+});

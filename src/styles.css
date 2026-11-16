@@ -221,3 +221,5 @@ html[data-input=keyboard] #halo-linear-app .spot-assignment,html[data-input=keyb
  #halo-linear-app .main-navigation{top:58px;transform:translateX(-50%);width:max-content}
  #halo-linear-app .main-navigation .ui-button{padding-inline:18px}
 }
+
+#halo-linear-app .recommendation-gate{width:auto;min-width:104px;height:29px;border-radius:999px;padding:0 10px;gap:8px;font-size:12px;color:var(--foreground);background:transparent}#halo-linear-app .recommendation-request{margin-left:4px;font-size:11px}

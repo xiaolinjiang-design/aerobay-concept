@@ -1,3 +1,4 @@
+import {gateFor,gateName} from '../lib/parking.js';
 import {applyViewport,towerOverviewPose} from './camera-framing.js';
 import {FLOOR_COUNT,BAYS_PER_FLOOR,bayAngle} from '../lib/garage-layout.js';
 import * as THREE from 'three';
@@ -209,10 +210,10 @@ function overview(){
 }
 function showRoute(route){
  while(routeGroup.children.length){const child=routeGroup.children[0];child.geometry.dispose();child.material.dispose();routeGroup.remove(child);}
- root.dataset.route=route?`${route.id}: ${route.type==='arrival'?'Top gate to bay':'Bay to bottom gate'}`:'';
+ root.dataset.route=route?`${route.id}: ${route.type==='arrival'?gateName(route)+' to bay':'Bay to '+gateName(route)}`:'';
  if(!route)return;
  const angle=bayAngle(route.bay),y=(route.floor-1)*2.35+.65;
- const bay=new THREE.Vector3(10.1*Math.cos(angle),y,10.1*Math.sin(angle)),inner=new THREE.Vector3(3*Math.cos(angle),y,3*Math.sin(angle)),center=new THREE.Vector3(0,y,0),portal=new THREE.Vector3(0,route.type==='arrival'?17:-.2,0);
+ const bay=new THREE.Vector3(10.1*Math.cos(angle),y,10.1*Math.sin(angle)),inner=new THREE.Vector3(3*Math.cos(angle),y,3*Math.sin(angle)),center=new THREE.Vector3(0,y,0),portal=new THREE.Vector3(0,gateFor(route)==='top'?17:-.2,0);
  const points=route.type==='arrival'?[portal,center,inner,bay]:[bay,inner,center,portal];
  const curve=new THREE.CurvePath();points.slice(1).forEach((point,index)=>curve.add(new THREE.LineCurve3(points[index],point)));
  const routeColor=new THREE.Color(getComputedStyle(root).getPropertyValue('--primary').trim()||'#5e6ad2');
@@ -264,7 +265,7 @@ function update(next){currentState=next;if(mode!=='app'||!next)return;
   cars.forEach((item,index)=>instances.setMatrixAt(index,visible.has(`${item.level+1}-${item.bay}`)?matrices[index]:hiddenMatrix));instances.instanceMatrix.needsUpdate=true;
  }));
  flying.traverse(part=>{if(part.userData.vehiclePaint)part.material.color.set(next.active?.type==='arrival'?'#9288ed':'#8ca8c0')});
- const active=next.active;gateState.top=!!active&&active.type==='arrival'&&active.phase==='gate-open';gateState.bottom=!!active&&active.type==='departure'&&active.phase==='gate-open';gateState.phase=active?'inside':'empty';
+ const active=next.active;gateState.top=!!active&&gateFor(active)==='top'&&active.phase==='gate-open';gateState.bottom=!!active&&gateFor(active)==='bottom'&&active.phase==='gate-open';gateState.phase=active?'inside':'empty';
  flying.visible=selected==='all'&&!!active;flightGlow.visible=flying.visible;
  const phaseKey=active?`${active.id}-${active.phase}`:null;
  if(phaseKey!==activePhaseKey){activePhaseKey=phaseKey;activePhaseStart=performance.now();}
@@ -291,7 +292,7 @@ const clock=new THREE.Clock();let frame;function animate(){if(disposed)return;fr
   flying.visible=(selected==='all'||Number(selected)===active.floor)&&!(active.type==='departure'&&['gate-closing','confirming'].includes(active.phase));
   root.dataset.vehiclePosition=`${pose.x.toFixed(2)},${pose.y.toFixed(2)},${pose.z.toFixed(2)}`;
   const opening=gateOpening(active,pointerReducedMotion.matches?Infinity:phaseElapsed);
-  [[topPanels,active.type==='arrival'],[bottomPanels,active.type==='departure']].forEach(([panels,relevant])=>panels.forEach((panel,i)=>{panel.position.x=relevant?opening*(i===0?-3.5:3.5):0}));
+  [[topPanels,gateFor(active)==='top'],[bottomPanels,gateFor(active)==='bottom']].forEach(([panels,relevant])=>panels.forEach((panel,i)=>{panel.position.x=relevant?opening*(i===0?-3.5:3.5):0}));
  }
  if(assignmentPointer.visible)assignmentPointer.position.y=assignmentPointer.userData.baseY+(pointerReducedMotion.matches||document.hidden?0:Math.sin(t*Math.PI*2/1.8)*.10);
  if(mode==='demo'&&gateState.phase==='entryOpening'&&elapsed>=800)setPhase('entering','One car entering');

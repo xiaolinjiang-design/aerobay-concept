@@ -36,3 +36,13 @@ test('physical gates open and close continuously over their full travel duration
  assert.equal(gateOpening({phase:'gate-closing'},GATE_PHASE_MS),0);
  assert.ok(gateOpening({phase:'reserved'},1800)>.1&&gateOpening({phase:'reserved'},1800)<.9);
 });
+
+test('bottom-gate arrivals enter from below and ascend before moving into their bay',()=>{
+ const movement={type:'arrival',gate:'bottom',floor:6,bay:3};
+ const outside=vehiclePose({...movement,phase:'reserved'});
+ const inside=vehiclePose({...movement,phase:'gate-open'},1400);
+ const end=vehiclePose({...movement,phase:'transit'},VEHICLE_TRANSIT_MS);
+ assert.ok(outside.y<inside.y);
+ assert.ok(inside.y<end.y);
+ assert.ok(distance(end,bayPosition(movement))<.001);
+});
