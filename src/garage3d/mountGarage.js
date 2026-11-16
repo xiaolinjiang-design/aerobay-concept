@@ -1,4 +1,5 @@
 import {gateFor,gateName} from '../lib/parking.js';
+import {VEHICLE_TRANSIT_MS} from '../lib/movement-timing.js';
 import {applyViewport,towerOverviewPose} from './camera-framing.js';
 import {FLOOR_COUNT,BAYS_PER_FLOOR,bayAngle} from '../lib/garage-layout.js';
 import * as THREE from 'three';
@@ -201,10 +202,10 @@ admitButton.addEventListener('click',()=>{if(admitButton.disabled)return;flying.
 releaseButton.addEventListener('click',()=>{if(releaseButton.disabled)return;flying.position.y=7;setPhase('exitOpening','Bottom gate opening')});setPhase('empty');
 const hiddenMatrix=new THREE.Matrix4().makeScale(0,0,0);
 let cameraGoal=null,targetGoal=null,lastFocusKey=null,wasChoosing=false,lastRouteKey=null;
-let activePhaseKey=null,activePhaseStart=performance.now();
+let activePhaseKey=null,activePhaseStart=performance.now(),movementViewKey=null;
 const routeGroup=new THREE.Group();garage.add(routeGroup);
 function overview(){
- selected='all';root.querySelectorAll('[data-level]').forEach(button=>button.classList.toggle('active',button.dataset.level==='all'));levels.forEach(group=>group.visible=true);roof.visible=false;
+ selected='all';root.querySelectorAll('[data-level]').forEach(button=>button.classList.toggle('active',button.dataset.level==='all'));levels.forEach(group=>group.visible=true);roof.visible=true;
  const pose=towerOverviewPose(camera);cameraGoal=pose.position;targetGoal=pose.target;controls.maxDistance=Math.max(95,pose.position.distanceTo(pose.target)*1.3);
  if(matchMedia('(prefers-reduced-motion: reduce)').matches){camera.position.copy(cameraGoal);controls.target.copy(targetGoal);cameraGoal=null;targetGoal=null;}
 }
@@ -251,7 +252,7 @@ function onPointerUp(event){if(mode!=='app'||!pointerStart)return;const movement
  if(currentState?.choosing&&currentState.availableBays?.some(item=>item.floor===spot.floor&&item.bay===spot.bay))onSpotClick?.(spot);
 }
 renderer.domElement.addEventListener('pointerdown',onPointerDown);renderer.domElement.addEventListener('pointerup',onPointerUp);
-function update(next){currentState=next;if(mode!=='app'||!next)return;
+function update(next){const previousActive=currentState?.active;currentState=next;if(mode!=='app'||!next)return;
  const occupied=new Set((next.occupiedBays||[]).map(({floor,bay})=>`${floor}-${bay}`));
  const reserved=new Set((next.reservedBays||[]).map(({floor,bay})=>`${floor}-${bay}`));
  if(next.active){const spot=`${next.active.floor}-${next.active.bay}`;occupied.delete(spot);reserved.delete(spot);}
@@ -275,12 +276,14 @@ function update(next){currentState=next;if(mode!=='app'||!next)return;
  const pointerSpot=next.choice;
  assignmentPointer.visible=!!(next.choosing&&pointerSpot&&available.has(`${pointerSpot.floor}-${pointerSpot.bay}`));
  if(assignmentPointer.visible){const angle=bayAngle(pointerSpot.bay);assignmentPointer.userData.baseY=(pointerSpot.floor-1)*2.35+1.1;assignmentPointer.position.set(10.1*Math.cos(angle),assignmentPointer.userData.baseY,10.1*Math.sin(angle));}
- const route=next.route,routeKey=route?`${route.id}-${route.type}-${route.floor}-${route.bay}`:null;
+ const route=next.route,routeKey=route?`${route.id}-${route.type}-${route.floor}-${route.bay}-${gateFor(route)}`:null;
  if(routeKey!==lastRouteKey){showRoute(route);if(route&&!next.choosing)overview();lastRouteKey=routeKey;}
  if(wasChoosing&&!next.choosing&&route)overview();
  const spot=next.choice;const focusKey=spot?`${spot.floor}-${spot.bay}`:null;
  if(spot&&focusKey!==lastFocusKey){focusSpot(spot);lastFocusKey=focusKey}
  if(!next.choosing)lastFocusKey=null;wasChoosing=next.choosing;
+ if(previousActive&&!active){movementViewKey=null;overview();}
+ root.dataset.roofVisible=String(roof.visible);
 }
 if(initialState)update(initialState);
 const pointerReducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
@@ -289,7 +292,21 @@ const clock=new THREE.Clock();let frame;function animate(){if(disposed)return;fr
   const active=currentState.active,phaseElapsed=performance.now()-activePhaseStart;
   const pose=vehiclePose(active,pointerReducedMotion.matches?0:phaseElapsed);
   flying.position.set(pose.x,pose.y,pose.z);flying.rotation.y=pose.heading;
-  flying.visible=(selected==='all'||Number(selected)===active.floor)&&!(active.type==='departure'&&['gate-closing','confirming'].includes(active.phase));
+  const travel=phaseElapsed/VEHICLE_TRANSIT_MS,lateral=active.phase==='confirming'||(active.phase==='transit'&&(active.type==='arrival'?travel>=.56:travel<.44))||(active.type==='departure'&&active.phase==='authorizing');
+  const floor=lateral?active.floor:Math.max(1,Math.min(FLOOR_COUNT,Math.round((pose.y-.43)/2.35)+1));
+  const gateVisible=!lateral&&gateFor(active)==='top';
+  levels.forEach((group,index)=>group.visible=index===floor-1);roof.visible=gateVisible;
+  selected=String(floor);root.querySelectorAll('[data-level]').forEach(button=>button.classList.toggle('active',button.dataset.level===selected));
+  const viewKey=`${active.id}-${lateral?'bay':'shaft'}`;
+  if(viewKey!==movementViewKey){
+   movementViewKey=viewKey;
+   if(lateral){const y=(active.floor-1)*2.35;targetGoal=new THREE.Vector3(0,y+.6,0);cameraGoal=new THREE.Vector3(25,y+23,29);}
+   else{const view=towerOverviewPose(camera);cameraGoal=view.position;targetGoal=view.target;}
+   if(pointerReducedMotion.matches){camera.position.copy(cameraGoal);controls.target.copy(targetGoal);cameraGoal=null;targetGoal=null;}
+  }
+  root.dataset.movementFloor=String(floor);root.dataset.roofVisible=String(roof.visible);
+
+  flying.visible=!(active.type==='departure'&&['gate-closing','confirming'].includes(active.phase));
   root.dataset.vehiclePosition=`${pose.x.toFixed(2)},${pose.y.toFixed(2)},${pose.z.toFixed(2)}`;
   const opening=gateOpening(active,pointerReducedMotion.matches?Infinity:phaseElapsed);
   [[topPanels,gateFor(active)==='top'],[bottomPanels,gateFor(active)==='bottom']].forEach(([panels,relevant])=>panels.forEach((panel,i)=>{panel.position.x=relevant?opening*(i===0?-3.5:3.5):0}));
