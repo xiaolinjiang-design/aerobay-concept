@@ -121,7 +121,8 @@ for(let i=0;i<24;i++){const a=i*Math.PI/12;line([3.35*Math.cos(a),3.35*Math.sin(
 for(let i=0;i<12;i++){const a=i*Math.PI/6;box(.16,2.75,.16,12.45*Math.cos(a),13.7,12.45*Math.sin(a),white,roof)}
 const hatchMaterial=mat('#354654',.32,.08);
 function gatePanels(parent,y){const panels=[];for(const side of [-1,1]){const shape=new THREE.Shape();if(side===1){shape.moveTo(0,-3.28);shape.absarc(0,0,3.28,-Math.PI/2,Math.PI/2,false);shape.lineTo(0,-3.28)}else{shape.moveTo(0,3.28);shape.absarc(0,0,3.28,Math.PI/2,Math.PI*1.5,false);shape.lineTo(0,3.28)}const panel=mesh(new THREE.ShapeGeometry(shape,48),hatchMaterial,parent);panel.rotation.x=-Math.PI/2;panel.position.y=y;panels.push(panel)}return panels}
-const topPanels=gatePanels(roof,15.08);
+const topGate=new THREE.Group();garage.add(topGate);
+const topPanels=gatePanels(topGate,15.08);
 const base=mesh(new THREE.ExtrudeGeometry(ringShape(16.5,3.35),{depth:.22,bevelEnabled:false,curveSegments:96}),mat('#202b38'));base.rotation.x=-Math.PI/2;base.position.y=-.4;base.receiveShadow=true;const bottomPanels=gatePanels(garage,-.15);
 const ground=mesh(new THREE.PlaneGeometry(200,200),new THREE.ShadowMaterial({color:'#020306',opacity:.3}));ground.rotation.x=-Math.PI/2;ground.position.y=-.43;ground.receiveShadow=true;
 const tunnel=new THREE.Group();garage.add(tunnel);
@@ -205,7 +206,7 @@ let cameraGoal=null,targetGoal=null,lastFocusKey=null,wasChoosing=false,lastRout
 let activePhaseKey=null,activePhaseStart=performance.now(),movementViewKey=null;
 const routeGroup=new THREE.Group();garage.add(routeGroup);
 function overview(){
- selected='all';root.querySelectorAll('[data-level]').forEach(button=>button.classList.toggle('active',button.dataset.level==='all'));levels.forEach(group=>group.visible=true);roof.visible=true;
+ selected='all';root.querySelectorAll('[data-level]').forEach(button=>button.classList.toggle('active',button.dataset.level==='all'));levels.forEach(group=>group.visible=true);roof.visible=true;topGate.visible=true;tunnel.visible=true;base.visible=true;ground.visible=true;bottomPanels.forEach(panel=>panel.visible=true);
  const pose=towerOverviewPose(camera);cameraGoal=pose.position;targetGoal=pose.target;controls.maxDistance=Math.max(95,pose.position.distanceTo(pose.target)*1.3);
  if(matchMedia('(prefers-reduced-motion: reduce)').matches){camera.position.copy(cameraGoal);controls.target.copy(targetGoal);cameraGoal=null;targetGoal=null;}
 }
@@ -240,7 +241,7 @@ function focusSpot({floor,bay}){
  if(!Number.isInteger(floor)||!Number.isInteger(bay)||floor<1||floor>FLOOR_COUNT||bay<1||bay>BAYS_PER_FLOOR)return;
  const angle=bayAngle(bay),x=10.1*Math.cos(angle),z=10.1*Math.sin(angle),y=(floor-1)*2.35+.8;
  selected=String(floor);root.querySelectorAll('[data-level]').forEach(button=>button.classList.toggle('active',button.dataset.level===selected));levels.forEach((group,index)=>group.visible=index===floor-1);
- roof.visible=false;
+ roof.visible=false;topGate.visible=false;
  targetGoal=new THREE.Vector3(x,y,z);cameraGoal=new THREE.Vector3(x-5.5*Math.cos(angle)-5*Math.sin(angle),y+8.5,z-5.5*Math.sin(angle)+5*Math.cos(angle));
  flying.visible=false;flightGlow.visible=false;
 }
@@ -293,9 +294,9 @@ const clock=new THREE.Clock();let frame;function animate(){if(disposed)return;fr
   const pose=vehiclePose(active,pointerReducedMotion.matches?0:phaseElapsed);
   flying.position.set(pose.x,pose.y,pose.z);flying.rotation.y=pose.heading;
   const travel=phaseElapsed/VEHICLE_TRANSIT_MS,lateral=active.phase==='confirming'||(active.phase==='transit'&&(active.type==='arrival'?travel>=.56:travel<.44))||(active.type==='departure'&&active.phase==='authorizing');
-  const floor=lateral?active.floor:Math.max(1,Math.min(FLOOR_COUNT,Math.round((pose.y-.43)/2.35)+1));
-  const gateVisible=!lateral&&gateFor(active)==='top';
-  levels.forEach((group,index)=>group.visible=index===floor-1);roof.visible=gateVisible;
+  const floor=active.floor;
+  const gateVisible=gateFor(active)==='top';
+  levels.forEach((group,index)=>group.visible=index===floor-1);roof.visible=false;topGate.visible=gateVisible;tunnel.visible=false;base.visible=false;ground.visible=false;bottomPanels.forEach(panel=>panel.visible=!gateVisible);
   selected=String(floor);root.querySelectorAll('[data-level]').forEach(button=>button.classList.toggle('active',button.dataset.level===selected));
   const viewKey=`${active.id}-${lateral?'bay':'shaft'}`;
   if(viewKey!==movementViewKey){
