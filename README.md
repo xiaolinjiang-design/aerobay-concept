@@ -40,7 +40,9 @@ The production site is generated in `dist/`. Preview runs on http://localhost:41
 
 ## Deploy and share
 
-Deploy `dist/` to any static host (Sites, Netlify, Vercel or Cloudflare Pages). Build command: `npm run build`; output directory: `dist`. No server secrets or backend are required. Hosted access depends on the host's sharing settings; owner-private hosting does not automatically grant access to other people.
+The GitHub Pages workflow deploys each push to `main` at https://xiaolinjiang-design.github.io/aerobay-concept/. Enable **GitHub Actions** as the Pages source in the repository settings. The Pages build uses `/aerobay-concept/` as its asset base; ordinary builds keep `/` for other hosts. The app is a browser-local simulation, so each visitor has a separate demo state.
+
+For another static host, run `npm run build` and deploy `dist/`. No server secrets or backend are required.
 
 ## Demo workflow
 

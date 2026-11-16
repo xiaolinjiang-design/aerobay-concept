@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { fileURLToPath, URL } from 'node:url';
 export default defineConfig({
+  base: process.env.GITHUB_PAGES === 'true' ? '/aerobay-concept/' : '/',
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
   esbuild: { jsx: 'automatic' },
   server: { port: 5173, strictPort: true },
