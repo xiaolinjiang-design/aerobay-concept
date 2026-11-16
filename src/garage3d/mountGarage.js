@@ -227,10 +227,15 @@ function showRoute(route){
  }
  const completed=mesh(new THREE.TubeGeometry(curve,160,.035,12,false),new THREE.MeshBasicMaterial({color:'#b7bbdc',transparent:true,opacity:.26,toneMapped:false,depthTest:true,depthWrite:false}),routeGroup);
  completed.geometry.setDrawRange(0,0);completed.castShadow=false;
- const chevron=new THREE.CurvePath();
- chevron.add(new THREE.LineCurve3(new THREE.Vector3(-.3,0,-.34),new THREE.Vector3(0,0,.34)));
- chevron.add(new THREE.LineCurve3(new THREE.Vector3(0,0,.34),new THREE.Vector3(.3,0,-.34)));
- const arrow=mesh(new THREE.TubeGeometry(chevron,12,.065,6,false),new THREE.MeshBasicMaterial({color:'#d1d4ff',toneMapped:false,depthTest:true}),routeGroup);
+ const arrowShape=new THREE.Shape();
+ arrowShape.moveTo(0,.56);
+ arrowShape.lineTo(.34,-.34);
+ arrowShape.lineTo(0,-.15);
+ arrowShape.lineTo(-.34,-.34);
+ arrowShape.closePath();
+ const arrowGeometry=new THREE.ExtrudeGeometry(arrowShape,{depth:.055,bevelEnabled:false});
+ arrowGeometry.rotateX(Math.PI/2);
+ const arrow=mesh(arrowGeometry,new THREE.MeshBasicMaterial({color:'#f7f8ff',side:THREE.DoubleSide,toneMapped:false,depthTest:true}),routeGroup);
  arrow.name='Route direction arrow';arrow.castShadow=false;
  const endpoint=mesh(new THREE.ConeGeometry(.24,.6,20),new THREE.MeshBasicMaterial({color:'#edb34c',toneMapped:false,depthTest:true}),routeGroup);
  endpoint.rotation.z=Math.PI;endpoint.position.copy(points.at(-1)).add(new THREE.Vector3(0,1.15,0));endpoint.name='Destination marker';endpoint.castShadow=false;
